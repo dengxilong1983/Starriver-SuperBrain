@@ -1,0 +1,111 @@
+﻿**********************
+Windows PowerShell 脚本开始
+开始时间: 20250829133751
+用户名: 邓熙龙\Administrator
+RunAs 用户: 邓熙龙\Administrator
+配置名称: 
+计算机: 邓熙龙 (Microsoft Windows NT 10.0.26100.0)
+主机应用程序: powershell -NoProfile -ExecutionPolicy Bypass -File .\archive_docs.ps1 -KeepDays 4 -KeepCount 4
+进程 ID: 8596
+PSVersion: 5.1.26100.4768
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.4768
+BuildVersion: 10.0.26100.4768
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started: C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\_archive_console.log
+Category [requirements]: found 10 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\active语义审计与迁移策略_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\active语义审计与迁移策略_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\可追溯性矩阵_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\可追溯性矩阵_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\接口需求清单_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\接口需求清单_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\用例与场景_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\用例与场景_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\需求规格说明书_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\需求规格说明书_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\非功能需求与SLA_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\非功能需求与SLA_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\领域模型与数据字典_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\领域模型与数据字典_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\验收标准与测试策略_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\验收标准与测试策略_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\api\postman\README.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\README_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\standards\状态枚举字典_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\状态枚举字典_V2.3_快照.md
+Category [design]: found 6 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\API设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\API设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\扩展点设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\扩展点设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\数据库设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\数据库设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\架构设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\架构设计说明_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\概要设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\概要设计说明_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\详细设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\详细设计说明_V2.3_快照.md
+Category [testing]: found 0 .md files
+Category [market_research]: found 0 .md files
+Category [summary]: found 1 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\summary\熙龙同行册.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\summary\熙龙同行册_快照.md
+Category [tools]: found 0 .md files
+Category [plans]: found 5 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3健康检查脚本.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3健康检查脚本_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3概念设计方案 - 副本.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3概念设计方案 - 副本_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3概念设计方案.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3概念设计方案_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3进化升级建议方案蓝图与里程碑计划.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3进化升级建议方案蓝图与里程碑计划_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3进化升级计划全解析：从技术架构到自主进化的完整蓝图.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3进化升级计划全解析：从技术架构到自主进化的完整蓝图_快照.md
+PS>TerminatingError(Out-File):“文件“C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\_archive_report.md”正由另一进程使用，因此该进程无法访问此文件。”
+Report generation failed: 文件“C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\_archive_report.md”正由另一进程使用，因此该进程无法访问此文件。
+Email disabled by default. Skipping email sending.
+Archive completed: C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29
+**********************
+Windows PowerShell 脚本结束
+结束时间: 20250829133752
+**********************
+﻿**********************
+Windows PowerShell 脚本开始
+开始时间: 20250829133751
+用户名: 邓熙龙\Administrator
+RunAs 用户: 邓熙龙\Administrator
+配置名称: 
+计算机: 邓熙龙 (Microsoft Windows NT 10.0.26100.0)
+主机应用程序: powershell.exe -NoProfile -ExecutionPolicy Bypass -File C:\星河超脑\星河超脑\scripts\archive_docs.ps1 -KeepDays 4 -KeepCount 4
+进程 ID: 12304
+PSVersion: 5.1.26100.4768
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.26100.4768
+BuildVersion: 10.0.26100.4768
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+Transcript started: C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\_archive_console.log
+Category [requirements]: found 10 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\active语义审计与迁移策略_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\active语义审计与迁移策略_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\可追溯性矩阵_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\可追溯性矩阵_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\接口需求清单_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\接口需求清单_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\用例与场景_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\用例与场景_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\需求规格说明书_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\需求规格说明书_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\非功能需求与SLA_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\非功能需求与SLA_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\领域模型与数据字典_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\领域模型与数据字典_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\验收标准与测试策略_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\验收标准与测试策略_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\api\postman\README.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\README_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\requirements\standards\状态枚举字典_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\requirements\状态枚举字典_V2.3_快照.md
+Category [design]: found 6 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\API设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\API设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\扩展点设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\扩展点设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\数据库设计_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\数据库设计_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\架构设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\架构设计说明_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\概要设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\概要设计说明_V2.3_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\design\详细设计说明_V2.3.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\design\详细设计说明_V2.3_快照.md
+Category [testing]: found 0 .md files
+Category [market_research]: found 0 .md files
+Category [summary]: found 1 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\summary\熙龙同行册.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\summary\熙龙同行册_快照.md
+Category [tools]: found 0 .md files
+Category [plans]: found 5 .md files
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3健康检查脚本.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3健康检查脚本_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3概念设计方案 - 副本.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3概念设计方案 - 副本_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3概念设计方案.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3概念设计方案_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3进化升级建议方案蓝图与里程碑计划.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3进化升级建议方案蓝图与里程碑计划_快照.md
+Copy: C:\星河超脑\星河超脑\V2.3\docs\plans\V2.3进化升级计划\星河超脑V2.3进化升级计划全解析：从技术架构到自主进化的完整蓝图.md -> C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\plans\星河超脑V2.3进化升级计划全解析：从技术架构到自主进化的完整蓝图_快照.md
+Report generated: C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29\_archive_report.md
+Email disabled by default. Skipping email sending.
+Archive completed: C:\星河超脑\星河超脑\V2.3\archives\docs\2025-08-29
+**********************
+Windows PowerShell 脚本结束
+结束时间: 20250829133752
+**********************
