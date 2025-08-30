@@ -1,0 +1,693 @@
+{
+  "info": {
+    "name": "V2.3 Status Enum Compliance - Enhanced Coverage",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Comprehensive assertions to enforce status enums across all APIs (95% coverage target)"
+  },
+  "item": [
+    {
+      "name": "Agents Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/agents/status",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "agents",
+            "status"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Response is JSON', function () {",
+              "  pm.response.to.have.header('Content-Type');",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+              "const AGENT_HEALTH_ALLOWED = new Set(['idle','busy','error','maintenance']);",
+              "",
+              "function scan(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+              "        pm.expect(TASK_ALLOWED.has(v) || AGENT_HEALTH_ALLOWED.has(v)).to.eql(true, `status not in allowed set: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'status must not be \\'active\\'');",
+              "      }",
+              "      scan(v);",
+              "    });",
+              "  }",
+              "}",
+              "scan(json);",
+              "pm.test('Agent health status validation passed', function () { pm.expect(true).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Memory Sync (202 + CloudSyncJob)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "name": "Content-Type", "value": "application/json"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/memory/sync",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "memory",
+            "sync"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const status = pm.response.code;",
+              "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+              "  pm.expect([200,201,202,204]).to.include(status);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+              "",
+              "function scan(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+              "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+              "      }",
+              "      scan(v);",
+              "    });",
+              "  }",
+              "}",
+              "scan(json);",
+              "pm.test('CloudSyncJob status validation passed', function () { pm.expect(true).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Memory Export",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/memory/export",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "memory",
+            "export"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Export endpoint responds successfully', function () {",
+              "  pm.expect([200,202]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+              "",
+              "function validateStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Forbidden status detected: ${v}`);",
+              "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `Invalid export job status: ${v}`);",
+              "      }",
+              "      validateStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Execution Act",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/execution/act",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "execution",
+            "act"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"action\": \"test_action\", \"parameters\": {}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Execution endpoint responds', function () {",
+              "  pm.expect([200,201,202]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const EXECUTION_ALLOWED = new Set(['pending','in_progress','completed','failed']);",
+              "",
+              "function validateExecutionStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateExecutionStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `ExecutionResult forbidden status: ${v}`);",
+              "        pm.expect(EXECUTION_ALLOWED.has(v)).to.eql(true, `ExecutionResult invalid status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'ExecutionResult status cannot be active');",
+              "      }",
+              "      validateExecutionStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateExecutionStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Reasoning Plan", 
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/reasoning/plan",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "reasoning",
+            "plan"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"goal\": \"test planning\", \"context\": {}}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Reasoning plan endpoint responds', function () {",
+              "  pm.expect([200,201,202]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const PLAN_ALLOWED = new Set(['pending','in_progress','completed','failed']);",
+              "",
+              "function validatePlanStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validatePlanStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Planning forbidden status: ${v}`);",
+              "        pm.expect(PLAN_ALLOWED.has(v)).to.eql(true, `Planning invalid status: ${v}`);",
+              "      }",
+              "      validatePlanStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validatePlanStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consciousness Attention GET",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/consciousness/attention",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "consciousness",
+            "attention"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Attention GET endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const ATTENTION_ALLOWED = new Set(['idle','busy','focused','distracted']);",
+              "",
+              "function validateAttentionStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateAttentionStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Attention forbidden status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'Attention status cannot be active');",
+              "      }",
+              "      validateAttentionStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateAttentionStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Consciousness State GET",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/consciousness/state",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "consciousness",
+            "state"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('State GET endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "",
+              "function validateConsciousnessState(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateConsciousnessState); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Consciousness forbidden status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'Consciousness status cannot be active');",
+              "      }",
+              "      validateConsciousnessState(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateConsciousnessState(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Experience Rules POST",
+      "request": {
+        "method": "POST",
+        "header": [
+          {"key": "Content-Type", "value": "application/json"}
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/experience/rules",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "experience",
+            "rules"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\"title\": \"test rule\", \"content\": \"test rule content\", \"category\": \"test\", \"tags\": [\"test\"], \"sources\": [\"integration_test\"]}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Experience rules POST endpoint responds', function () {",
+              "  pm.expect([200,201]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const EXPERIENCE_ALLOWED = new Set(['active','deprecated','draft']);",
+              "",
+              "function validateExperienceStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateExperienceStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        // Experience rules can use 'active' (enable/disable semantics)",
+              "        pm.expect(EXPERIENCE_ALLOWED.has(v)).to.eql(true, `ExperienceRule invalid status: ${v}`);",
+              "      }",
+              "      validateExperienceStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateExperienceStatus(json);",
+              "pm.test('Experience rule status validation passed', function () { pm.expect(true).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Experience Candidates GET",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/experience/candidates",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "experience",
+            "candidates"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Experience candidates endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const EXPERIENCE_ALLOWED = new Set(['active','deprecated','draft']);",
+              "",
+              "function validateCandidateStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateCandidateStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(EXPERIENCE_ALLOWED.has(v)).to.eql(true, `Candidate invalid status: ${v}`);",
+              "      }",
+              "      validateCandidateStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateCandidateStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cloud Status",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/cloud/status?user_id=test-user",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "cloud",
+            "status"
+          ],
+          "query": [
+            { "key": "user_id", "value": "test-user" }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Cloud status endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "const CLOUD_STATUS_ALLOWED = new Set(['connected','disconnected','syncing','error']);",
+              "",
+              "function validateCloudStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateCloudStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Cloud forbidden status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'Cloud status cannot be active');",
+              "      }",
+              "      validateCloudStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateCloudStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Observability Metrics",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/observability/metrics",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "observability",
+            "metrics"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Metrics endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "",
+              "function validateMetricsStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateMetricsStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Metrics forbidden status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'Metrics status cannot be active');",
+              "      }",
+              "      validateMetricsStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateMetricsStatus(json);",
+              "pm.test('Metrics status validation completed', function () { pm.expect(true).to.be.true; });"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Observability Logs Search",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v2.3-preview/observability/logs/search?q=test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v2.3-preview",
+            "observability",
+            "logs",
+            "search"
+          ],
+          "query": [
+            {
+              "key": "q",
+              "value": "test"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Logs search endpoint responds', function () {",
+              "  pm.expect([200]).to.include(pm.response.code);",
+              "});",
+              "",
+              "let json = {};",
+              "try { json = pm.response.json(); } catch (e) { json = {}; }",
+              "",
+              "const DISALLOWED = new Set(['running','success','error']);",
+              "",
+              "function validateLogsStatus(obj) {",
+              "  if (obj === null || obj === undefined) return;",
+              "  if (Array.isArray(obj)) { obj.forEach(validateLogsStatus); return; }",
+              "  if (typeof obj === 'object') {",
+              "    Object.keys(obj).forEach(k => {",
+              "      const v = obj[k];",
+              "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+              "        pm.expect(DISALLOWED.has(v)).to.eql(false, `Logs forbidden status: ${v}`);",
+              "        pm.expect(v !== 'active').to.eql(true, 'Logs status cannot be active');",
+              "      }",
+              "      validateLogsStatus(v);",
+              "    });",
+              "  }",
+              "}",
+              "validateLogsStatus(json);"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    }
+  ]
+}

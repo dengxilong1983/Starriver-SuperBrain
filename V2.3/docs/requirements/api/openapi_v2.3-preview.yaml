@@ -1,0 +1,654 @@
+openapi: 3.0.3
+info:
+  title: 星河超脑 API
+  version: v2.3-preview
+  description: |
+    预览版接口契约（v2.3-preview）。涵盖云端授权、状态查询、记忆同步与导出四个核心端点。
+    注意：预览版仅用于联调与契约测试，正式发布前可能小幅调整但保持向后兼容。
+servers:
+  - url: http://127.0.0.1:8230/api/v2.3-preview
+    description: 本地开发（FastAPI）
+  - url: https://api.starrymind.example.com/api/v2.3-preview
+    description: 预览环境（示例）
+security:
+  - bearerAuth: []
+paths:
+  /cloud/consent:
+    post:
+      summary: 创建或更新云端授权
+      operationId: createConsent
+      tags: [cloud]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 64 }
+          required: false
+          description: 幂等键，确保重试时不重复创建
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scopes]
+              properties:
+                scopes:
+                  type: array
+                  items: { $ref: '#/components/schemas/ConsentScope' }
+                expiresAt:
+                  type: string
+                  format: date-time
+                  nullable: true
+      responses:
+        '201':
+          description: 授权已创建
+          headers:
+            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
+            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Consent' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    delete:
+      summary: 撤销云端授权
+      operationId: revokeConsent
+      tags: [cloud]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  enum: [user_initiated, expired, policy_update, other]
+      responses:
+        '200':
+          description: 授权已撤销
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Consent' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /cloud/status:
+    get:
+      summary: 查询云端授权与同步状态
+      operationId: getCloudStatus
+      tags: [cloud]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      responses:
+        '200':
+          description: 当前云端状态
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active: { type: boolean }
+                  expiresAt: { type: string, format: date-time, nullable: true }
+                  lastJob: { $ref: '#/components/schemas/CloudSyncJob', nullable: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /memory/sync:
+    post:
+      summary: 端→云记忆增量同步
+      operationId: syncMemory
+      tags: [memory]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 64 }
+          required: false
+          description: 幂等键，保证重复提交只处理一次
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [clientCommitId, items]
+              properties:
+                clientCommitId: { type: string }
+                items:
+                  type: array
+                  items: { $ref: '#/components/schemas/MemoryChange' }
+      responses:
+        '202':
+          description: 同步作业已受理
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CloudSyncJob' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /memory/export:
+    get:
+      summary: 导出云端记忆（脱敏）
+      operationId: exportMemory
+      tags: [memory]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+        - in: query
+          name: format
+          schema: { type: string, enum: [jsonl, zip] }
+          required: false
+          description: 导出格式，默认 jsonl
+      responses:
+        '200':
+          description: 导出任务完成（预签名下载链接）
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [downloadUrl]
+                properties:
+                  downloadUrl: { type: string, format: uri }
+                  expiresAt: { type: string, format: date-time }
+                  checksum: { type: string, description: 'sha256' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/run:
+    post:
+      summary: 启动多智能体研究任务
+      operationId: runAgents
+      tags: [agents]
+      parameters:
+        - in: header
+          name: Idempotency-Key
+          schema: { type: string, maxLength: 64 }
+          required: false
+          description: 幂等键，避免重复提交相同任务
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AgentsRunRequest' }
+      responses:
+        '200':
+          description: 任务已启动（可能包含即时结果或运行中状态）
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AgentsRunResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/status:
+    get:
+      summary: Agent状态监控
+      operationId: getAgentsStatus
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      responses:
+        '200':
+          description: 系统中所有Agent的健康状态、负载情况、性能指标
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  system_status: { type: string, enum: [healthy, degraded, critical] }
+                  busy_agents: { type: integer, minimum: 0 }
+                  max_agents: { type: integer, minimum: 0 }
+                  agents:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        agent_id: { type: string }
+                        type: { type: string }
+                        status: { type: string, enum: [idle, busy, error, maintenance] }
+                        current_task_id: { type: string, nullable: true }
+                        cpu_usage: { type: number, minimum: 0, maximum: 1 }
+                        memory_usage_mb: { type: number, minimum: 0 }
+                        tasks_completed_today: { type: integer, minimum: 0 }
+                        average_task_duration_seconds: { type: number, minimum: 0 }
+                        last_heartbeat: { type: string, format: date-time }
+                  system_metrics:
+                    type: object
+                    properties:
+                      tasks_in_queue: { type: integer, minimum: 0 }
+                      average_wait_time_seconds: { type: number, minimum: 0 }
+                      success_rate_24h: { type: number, minimum: 0, maximum: 1 }
+                      error_rate_24h: { type: number, minimum: 0, maximum: 1 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/tasks/{task_id}:
+    parameters:
+      - in: path
+        name: task_id
+        required: true
+        schema: { type: string }
+    get:
+      summary: 任务状态查询
+      operationId: getAgentsTaskStatus
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      responses:
+        '200':
+          description: 指定任务的实时执行状态与进度
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  status: { type: string, enum: [pending, in_progress, completed, failed, canceled, timeout] }
+                  progress: { type: number, minimum: 0, maximum: 1 }
+                  current_phase: { type: string }
+                  agents_status:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        agent_id: { type: string }
+                        status: { type: string, enum: [pending, in_progress, completed, failed, canceled, timeout] }
+                        completion_time: { type: string, format: date-time, nullable: true }
+                        output_summary: { type: string, nullable: true }
+                  budget_used: { type: number, minimum: 0 }
+                  budget_remaining: { type: number, minimum: 0 }
+                  intermediate_results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        phase: { type: string }
+                        content_preview: { type: string }
+                        quality_score: { type: number, minimum: 0, maximum: 1 }
+                  estimated_completion: { type: string, format: date-time, nullable: true }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+    delete:
+      summary: 任务取消
+      operationId: cancelAgentsTask
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 取消原因
+                force:
+                  type: boolean
+                  default: false
+      responses:
+        '200':
+          description: 任务取消结果
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+                  task_id: { type: string }
+                  previous_status: { type: string }
+                  cancellation_time: { type: string, format: date-time }
+                  partial_results_available: { type: boolean }
+                  budget_refunded: { type: number, minimum: 0 }
+                  affected_agents:
+                    type: array
+                    items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/tasks/{task_id}/result:
+    get:
+      summary: 任务结果获取
+      operationId: getAgentsTaskResult
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+        - in: path
+          name: task_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 已完成任务的最终结果与相关信息
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  status: { type: string, enum: [completed, failed] }
+                  completion_time: { type: string, format: date-time, nullable: true }
+                  result:
+                    type: object
+                    properties:
+                      report_content: { type: string }
+                      citations:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            title: { type: string }
+                            url: { type: string, format: uri }
+                            credibility_score: { type: number, minimum: 0, maximum: 1 }
+                            cited_in_sections:
+                              type: array
+                              items: { type: string }
+                      quality_metrics:
+                        type: object
+                        properties:
+                          overall_score: { type: number, minimum: 0, maximum: 1 }
+                          content_completeness: { type: number, minimum: 0, maximum: 1 }
+                          citation_accuracy: { type: number, minimum: 0, maximum: 1 }
+                          logical_coherence: { type: number, minimum: 0, maximum: 1 }
+                  execution_trace:
+                    type: object
+                    properties:
+                      total_duration_seconds: { type: number, minimum: 0 }
+                      phases:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            phase: { type: string }
+                            duration_seconds: { type: number, minimum: 0 }
+                            agent: { type: string }
+                            key_decisions:
+                              type: array
+                              items: { type: string }
+                  budget_final:
+                    type: object
+                    properties:
+                      allocated: { type: number, minimum: 0 }
+                      used: { type: number, minimum: 0 }
+                      efficiency_ratio: { type: number, minimum: 0 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/config:
+    put:
+      summary: Agent配置管理
+      operationId: updateAgentsConfig
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_concurrent_tasks: { type: integer, minimum: 0 }
+                default_timeout_seconds: { type: integer, minimum: 0 }
+                quality_threshold_default: { type: number, minimum: 0, maximum: 1 }
+                budget_limit_per_task: { type: number, minimum: 0 }
+                agent_pool_settings:
+                  type: object
+                  additionalProperties:
+                    type: object
+                    properties:
+                      max_instances: { type: integer, minimum: 0 }
+                      idle_timeout: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: 配置已更新
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success: { type: boolean }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+  /agents/tasks/{task_id}/trace:
+    get:
+      summary: 执行轨迹详情
+      operationId: getAgentsTaskTrace
+      tags: [agents]
+      parameters:
+        - $ref: '#/components/parameters/X-Request-Id'
+        - in: path
+          name: task_id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 任务的详细执行轨迹
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  task_id: { type: string }
+                  trace_id: { type: string }
+                  detailed_timeline:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp: { type: string, format: date-time }
+                        agent_id: { type: string }
+                        action: { type: string }
+                        details: { type: object }
+                        thinking_process: { type: string, nullable: true }
+                  inter_agent_communications:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp: { type: string, format: date-time }
+                        from: { type: string }
+                        to: { type: string }
+                        message_type: { type: string }
+                        content: { type: string }
+                  decision_points:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        timestamp: { type: string, format: date-time }
+                        decision: { type: string }
+                        reasoning: { type: string }
+                        alternatives_considered:
+                          type: array
+                          items: { type: string }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '500': { $ref: '#/components/responses/ServerError' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  parameters:
+    X-Request-Id:
+      in: header
+      name: X-Request-Id
+      required: false
+      schema: { type: string }
+      description: 请求唯一标识，用于全链路追踪
+  headers:
+    RateLimit-Limit:
+      description: 本时间窗内的请求上限
+      schema: { type: integer }
+    RateLimit-Remaining:
+      description: 本时间窗内剩余请求数
+      schema: { type: integer }
+  responses:
+    BadRequest:
+      description: 请求格式错误或参数非法
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+    Unauthorized:
+      description: 未授权或令牌无效
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+    Conflict:
+      description: 资源冲突（如重复幂等键）
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+    NotFound:
+      description: 资源不存在
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+    TooManyRequests:
+      description: 超出限流
+      headers:
+        Retry-After:
+          description: 建议重试秒数
+          schema: { type: integer }
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+    ServerError:
+      description: 服务器内部错误
+      content:
+        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
+  schemas:
+    Consent:
+      type: object
+      required: [id, userId, status, createdAt, updatedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        status: { type: string, enum: [active, revoked, pending] }
+        scopes:
+          type: array
+          items: { $ref: '#/components/schemas/ConsentScope' }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        revokeReason: { type: string, nullable: true }
+        revokeAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ConsentScope:
+      type: string
+      enum: [dialog, document, usage]
+    CloudSyncJob:
+      type: object
+      required: [id, userId, type, status, startedAt]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        type: { type: string, enum: [full, incremental, export] }
+        status: { type: string, enum: [pending, in_progress, completed, failed, timeout, manual_required] }
+        checksumBefore: { type: string, nullable: true }
+        checksumAfter: { type: string, nullable: true }
+        stats:
+          type: object
+          properties:
+            uploaded: { type: integer }
+            downloaded: { type: integer }
+            conflicts: { type: integer }
+            retries: { type: integer }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time, nullable: true }
+        errorCode: { type: string, nullable: true }
+        errorMsg: { type: string, nullable: true }
+    MemoryChange:
+      type: object
+      required: [op, itemType, data]
+      properties:
+        op: { type: string, enum: [add, update, delete] }
+        itemType: { type: string, enum: [memory, narrative, link] }
+        data:
+          type: object
+          description: 变更的数据内容（随类型而异）
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        requestId: { type: string, nullable: true }
+    AgentsRunRequest:
+      type: object
+      required: [task_type, query]
+      properties:
+        task_type:
+          type: string
+          enum: [breadth_first_research, single_agent_analysis]
+          description: 任务类型
+        query:
+          type: string
+          minLength: 1
+          description: 研究主题或问题
+        max_agents:
+          type: integer
+          minimum: 1
+          maximum: 5
+          default: 3
+        budget:
+          type: object
+          properties:
+            time_limit: { type: number, minimum: 0, description: '秒' }
+            cost_limit: { type: number, minimum: 0, description: '成本单位（示例）' }
+        quality_threshold:
+          type: number
+          minimum: 0
+          maximum: 1
+          default: 0.7
+    AgentCitation:
+      type: object
+      properties:
+        source: { type: string, description: '来源URL或标识' }
+        credibility: { type: number, minimum: 0, maximum: 1 }
+        snippet: { type: string }
+    AgentCostBreakdown:
+      type: object
+      properties:
+        search: { type: number }
+        synthesis: { type: number }
+        total: { type: number }
+    AgentsRunResponse:
+      type: object
+      required: [task_id, status]
+      properties:
+        task_id: { type: string }
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed, canceled, timeout]
+        results:
+          type: object
+          nullable: true
+          properties:
+            synthesis: { type: string }
+            citations:
+              type: array
+              items: { $ref: '#/components/schemas/AgentCitation' }
+            confidence: { type: number, minimum: 0, maximum: 1 }
+            coverage_score: { type: number, minimum: 0, maximum: 1 }
+        agents_used: { type: integer, minimum: 0 }
+        cost_breakdown: { $ref: '#/components/schemas/AgentCostBreakdown' }

@@ -1,0 +1,9 @@
+# 归档演示配置（可安全删除）
+# TOML 示例
+[meta]
+name = "demo-pipeline"
+version = "0.1.0"
+
+[steps.archive]
+enabled = true
+whitelist_suffix = ["快照"]

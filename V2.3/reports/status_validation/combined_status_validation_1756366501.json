@@ -1,0 +1,30 @@
+{
+  "timestamp": "2025-08-28 15:35:01",
+  "overall_success": false,
+  "total_duration": 40.83813953399658,
+  "coverage_percentage": 0,
+  "summary": {
+    "total_tests": 0,
+    "passed_tests": 0,
+    "failed_tests": 0,
+    "integration_tests_success": false,
+    "postman_collection_success": false
+  },
+  "detailed_results": [
+    {
+      "type": "integration_tests",
+      "success": false,
+      "duration": 40.83813953399658,
+      "stdout": "",
+      "stderr": "c: (unittest.loader._FailedTest.c:) ... ERROR\n\n======================================================================\nERROR: c: (unittest.loader._FailedTest.c:)\n----------------------------------------------------------------------\nImportError: Failed to import test module: c:\nTraceback (most recent call last):\n  File \"C:\\Python313\\Lib\\unittest\\loader.py\", line 137, in loadTestsFromName\n    module = __import__(module_name)\nModuleNotFoundError: No module named 'c:'\n\n\n----------------------------------------------------------------------\nRan 1 test in 0.000s\n\nFAILED (errors=1)\n",
+      "returncode": 1
+    },
+    {
+      "type": "postman_collection",
+      "success": false,
+      "duration": 0,
+      "error": "Newman CLI not found. Install with: npm install -g newman",
+      "returncode": -1
+    }
+  ]
+}

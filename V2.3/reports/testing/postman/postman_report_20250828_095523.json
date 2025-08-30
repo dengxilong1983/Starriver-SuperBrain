@@ -1,0 +1,1323 @@
+{
+  "collection": {
+    "item": [
+      {
+        "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+        "name": "Agents Status",
+        "request": {
+          "url": {
+            "path": [
+              "api",
+              "v2.3-preview",
+              "agents",
+              "status"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "method": "GET"
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+              "type": "text/javascript",
+              "exec": [
+                "pm.test('Response is JSON', function () {",
+                "  pm.response.to.have.header('Content-Type');",
+                "});",
+                "",
+                "let json = {};",
+                "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                "",
+                "const DISALLOWED = new Set(['running','success','error']);",
+                "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                "",
+                "function scan(obj) {",
+                "  if (obj === null || obj === undefined) return;",
+                "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                "  if (typeof obj === 'object') {",
+                "    Object.keys(obj).forEach(k => {",
+                "      const v = obj[k];",
+                "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                "      }",
+                "      scan(v);",
+                "    });",
+                "  }",
+                "}",
+                "scan(json);",
+                "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+              ],
+              "_lastExecutionId": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+            }
+          }
+        ]
+      },
+      {
+        "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+        "name": "Memory Sync (202 + CloudSyncJob)",
+        "request": {
+          "url": {
+            "path": [
+              "api",
+              "v2.3-preview",
+              "memory",
+              "sync"
+            ],
+            "host": [
+              "{{baseUrl}}"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "name": "Content-Type",
+              "key": "Content-Type",
+              "value": "application/json"
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+          }
+        },
+        "response": [],
+        "event": [
+          {
+            "listen": "test",
+            "script": {
+              "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+              "type": "text/javascript",
+              "exec": [
+                "const status = pm.response.code;",
+                "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                "  pm.expect([200,201,202,204]).to.include(status);",
+                "});",
+                "",
+                "let json = {};",
+                "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                "",
+                "const DISALLOWED = new Set(['running','success','error']);",
+                "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                "",
+                "function scan(obj) {",
+                "  if (obj === null || obj === undefined) return;",
+                "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                "  if (typeof obj === 'object') {",
+                "    Object.keys(obj).forEach(k => {",
+                "      const v = obj[k];",
+                "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                "      }",
+                "      scan(v);",
+                "    });",
+                "  }",
+                "}",
+                "scan(json);"
+              ],
+              "_lastExecutionId": "c8c221ed-3b96-4bed-a233-fa195203d339"
+            }
+          }
+        ]
+      }
+    ],
+    "event": [],
+    "variable": [],
+    "info": {
+      "_postman_id": "771d3a2b-a1fe-4e19-8458-9dc24287ae33",
+      "name": "V2.3 Status Enum Compliance",
+      "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+      "description": {
+        "content": "Assertions to enforce status enums across APIs (CloudSyncJob, ExecutionResult).",
+        "type": "text/plain"
+      }
+    }
+  },
+  "environment": {
+    "_": {
+      "postman_variable_scope": "environment",
+      "postman_exported_at": "2025-08-28T08:00:00.000Z",
+      "postman_exported_using": "Postman/10.x"
+    },
+    "id": "8f7b3a74-5c2f-4e15-9db0-1e5f2243e001",
+    "name": "V2.3 Local",
+    "values": [
+      {
+        "type": "any",
+        "value": "http://localhost:8000",
+        "key": "baseUrl"
+      }
+    ]
+  },
+  "globals": {
+    "id": "666ac229-eb13-4c96-b426-d0df29f8ee4e",
+    "values": []
+  },
+  "run": {
+    "stats": {
+      "iterations": {
+        "total": 1,
+        "pending": 0,
+        "failed": 0
+      },
+      "items": {
+        "total": 2,
+        "pending": 0,
+        "failed": 0
+      },
+      "scripts": {
+        "total": 2,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequests": {
+        "total": 2,
+        "pending": 0,
+        "failed": 0
+      },
+      "requests": {
+        "total": 2,
+        "pending": 0,
+        "failed": 2
+      },
+      "tests": {
+        "total": 2,
+        "pending": 0,
+        "failed": 0
+      },
+      "assertions": {
+        "total": 3,
+        "pending": 0,
+        "failed": 2
+      },
+      "testScripts": {
+        "total": 2,
+        "pending": 0,
+        "failed": 0
+      },
+      "prerequestScripts": {
+        "total": 0,
+        "pending": 0,
+        "failed": 0
+      }
+    },
+    "timings": {
+      "responseAverage": 0,
+      "responseMin": 0,
+      "responseMax": 0,
+      "responseSd": 0,
+      "dnsAverage": 0,
+      "dnsMin": 0,
+      "dnsMax": 0,
+      "dnsSd": 0,
+      "firstByteAverage": 0,
+      "firstByteMin": 0,
+      "firstByteMax": 0,
+      "firstByteSd": 0,
+      "started": 1756346137598,
+      "completed": 1756346137768
+    },
+    "executions": [
+      {
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 2,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "444568ba-d7d1-4ef6-8c86-6693980f362a",
+          "httpRequestId": "4d5ceb5b-5746-465b-84a3-a42b255cad1c"
+        },
+        "item": {
+          "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+          "name": "Agents Status",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v2.3-preview",
+                "agents",
+                "status"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is JSON', function () {",
+                  "  pm.response.to.have.header('Content-Type');",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);",
+                  "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+                ],
+                "_lastExecutionId": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8000",
+            "path": [
+              "api",
+              "v2.3-preview",
+              "agents",
+              "status"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "d8c15adf-6fd9-4cea-bccd-7cdf37204ee1",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "GET"
+        },
+        "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+        "requestError": {
+          "errno": -4078,
+          "code": "ECONNREFUSED",
+          "syscall": "connect",
+          "address": "127.0.0.1",
+          "port": 8000
+        },
+        "assertions": [
+          {
+            "assertion": "Response is JSON",
+            "skipped": false,
+            "error": {
+              "name": "AssertionError",
+              "index": 0,
+              "test": "Response is JSON",
+              "message": "expected response to have header with key 'Content-Type'",
+              "stack": "AssertionError: expected response to have header with key 'Content-Type'\n   at Object.eval sandbox-script.js:1:1)"
+            }
+          },
+          {
+            "assertion": "No disallowed status values present",
+            "skipped": false
+          }
+        ]
+      },
+      {
+        "cursor": {
+          "ref": "ca0d9841-b73a-49b1-bb97-530f5674f226",
+          "length": 2,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "eb5d6a0a-c5e2-42b9-b91e-bed970501b87"
+        },
+        "item": {
+          "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+          "name": "Memory Sync (202 + CloudSyncJob)",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v2.3-preview",
+                "memory",
+                "sync"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "name": "Content-Type",
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+                "type": "text/javascript",
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                  "  pm.expect([200,201,202,204]).to.include(status);",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);"
+                ],
+                "_lastExecutionId": "c8c221ed-3b96-4bed-a233-fa195203d339"
+              }
+            }
+          ]
+        },
+        "request": {
+          "url": {
+            "protocol": "http",
+            "port": "8000",
+            "path": [
+              "api",
+              "v2.3-preview",
+              "memory",
+              "sync"
+            ],
+            "host": [
+              "localhost"
+            ],
+            "query": [],
+            "variable": []
+          },
+          "header": [
+            {
+              "name": "Content-Type",
+              "key": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "key": "User-Agent",
+              "value": "PostmanRuntime/7.39.1",
+              "system": true
+            },
+            {
+              "key": "Accept",
+              "value": "*/*",
+              "system": true
+            },
+            {
+              "key": "Cache-Control",
+              "value": "no-cache",
+              "system": true
+            },
+            {
+              "key": "Postman-Token",
+              "value": "df77b5b5-49df-4ed5-b023-b56dbb84f0fb",
+              "system": true
+            },
+            {
+              "key": "Host",
+              "value": "localhost:8000",
+              "system": true
+            },
+            {
+              "key": "Accept-Encoding",
+              "value": "gzip, deflate, br",
+              "system": true
+            },
+            {
+              "key": "Connection",
+              "value": "keep-alive",
+              "system": true
+            }
+          ],
+          "method": "POST",
+          "body": {
+            "mode": "raw",
+            "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+          }
+        },
+        "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+        "requestError": {
+          "errno": -4078,
+          "code": "ECONNREFUSED",
+          "syscall": "connect",
+          "address": "127.0.0.1",
+          "port": 8000
+        },
+        "assertions": [
+          {
+            "assertion": "Accepted (202) or OK (200/201/204) for sync endpoint",
+            "skipped": false,
+            "error": {
+              "name": "AssertionError",
+              "index": 0,
+              "test": "Accepted (202) or OK (200/201/204) for sync endpoint",
+              "message": "expected [ 200, 201, 202, 204 ] to include undefined",
+              "stack": "AssertionError: expected [ 200, 201, 202, 204 ] to include undefined\n   at Object.eval sandbox-script.js:1:2)"
+            }
+          }
+        ]
+      }
+    ],
+    "transfers": {
+      "responseTotal": 0
+    },
+    "failures": [
+      {
+        "error": {
+          "errno": -4078,
+          "code": "ECONNREFUSED",
+          "syscall": "connect",
+          "address": "127.0.0.1",
+          "port": 8000,
+          "name": "Error",
+          "message": "connect ECONNREFUSED 127.0.0.1:8000",
+          "stack": "Error: connect ECONNREFUSED 127.0.0.1:8000\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)",
+          "checksum": "fc59a70539da38d1ea1224cc6d2870af",
+          "id": "4953ba01-e970-4124-b7e7-8cad3edc587c",
+          "timestamp": 1756346137626,
+          "stacktrace": [
+            {
+              "fileName": "node:net",
+              "lineNumber": 1637,
+              "functionName": "TCPConnectWrap.afterConnect [as oncomplete]",
+              "typeName": "TCPConnectWrap",
+              "methodName": "afterConnect [as oncomplete]",
+              "columnNumber": 16,
+              "native": false
+            }
+          ]
+        },
+        "at": "request",
+        "source": {
+          "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+          "name": "Agents Status",
+          "request": {
+            "url": {
+              "protocol": "http",
+              "port": "8000",
+              "path": [
+                "api",
+                "v2.3-preview",
+                "agents",
+                "status"
+              ],
+              "host": [
+                "localhost"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.39.1",
+                "system": true
+              },
+              {
+                "key": "Accept",
+                "value": "*/*",
+                "system": true
+              },
+              {
+                "key": "Cache-Control",
+                "value": "no-cache",
+                "system": true
+              },
+              {
+                "key": "Postman-Token",
+                "value": "d8c15adf-6fd9-4cea-bccd-7cdf37204ee1",
+                "system": true
+              },
+              {
+                "key": "Host",
+                "value": "localhost:8000",
+                "system": true
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate, br",
+                "system": true
+              },
+              {
+                "key": "Connection",
+                "value": "keep-alive",
+                "system": true
+              }
+            ],
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is JSON', function () {",
+                  "  pm.response.to.have.header('Content-Type');",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);",
+                  "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+                ]
+              }
+            }
+          ]
+        },
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 2,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "444568ba-d7d1-4ef6-8c86-6693980f362a",
+          "httpRequestId": "4d5ceb5b-5746-465b-84a3-a42b255cad1c"
+        }
+      },
+      {
+        "error": {
+          "name": "AssertionError",
+          "index": 0,
+          "test": "Response is JSON",
+          "message": "expected response to have header with key 'Content-Type'",
+          "stack": "AssertionError: expected response to have header with key 'Content-Type'\n   at Object.eval sandbox-script.js:1:1)",
+          "checksum": "d4d0ba5fa0e47d6c6ecf1fc4157edd5a",
+          "id": "e435be7c-3e64-4ab0-8194-04da56ea6299",
+          "timestamp": 1756346137640,
+          "stacktrace": [
+            {
+              "fileName": "sandbox-script.js",
+              "lineNumber": 1,
+              "functionName": "Object.eval",
+              "typeName": "Object",
+              "methodName": "eval",
+              "columnNumber": 1,
+              "native": false
+            }
+          ]
+        },
+        "at": "assertion:0 in test-script",
+        "source": {
+          "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+          "name": "Agents Status",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v2.3-preview",
+                "agents",
+                "status"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "method": "GET"
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response is JSON', function () {",
+                  "  pm.response.to.have.header('Content-Type');",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);",
+                  "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+                ],
+                "_lastExecutionId": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "item": [
+            {
+              "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+              "name": "Agents Status",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v2.3-preview",
+                    "agents",
+                    "status"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Response is JSON', function () {",
+                      "  pm.response.to.have.header('Content-Type');",
+                      "});",
+                      "",
+                      "let json = {};",
+                      "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                      "",
+                      "const DISALLOWED = new Set(['running','success','error']);",
+                      "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                      "",
+                      "function scan(obj) {",
+                      "  if (obj === null || obj === undefined) return;",
+                      "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                      "  if (typeof obj === 'object') {",
+                      "    Object.keys(obj).forEach(k => {",
+                      "      const v = obj[k];",
+                      "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                      "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                      "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                      "      }",
+                      "      scan(v);",
+                      "    });",
+                      "  }",
+                      "}",
+                      "scan(json);",
+                      "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+                    ],
+                    "_lastExecutionId": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+              "name": "Memory Sync (202 + CloudSyncJob)",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v2.3-preview",
+                    "memory",
+                    "sync"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "name": "Content-Type",
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+                    "type": "text/javascript",
+                    "exec": [
+                      "const status = pm.response.code;",
+                      "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                      "  pm.expect([200,201,202,204]).to.include(status);",
+                      "});",
+                      "",
+                      "let json = {};",
+                      "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                      "",
+                      "const DISALLOWED = new Set(['running','success','error']);",
+                      "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                      "",
+                      "function scan(obj) {",
+                      "  if (obj === null || obj === undefined) return;",
+                      "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                      "  if (typeof obj === 'object') {",
+                      "    Object.keys(obj).forEach(k => {",
+                      "      const v = obj[k];",
+                      "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                      "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                      "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                      "      }",
+                      "      scan(v);",
+                      "    });",
+                      "  }",
+                      "}",
+                      "scan(json);"
+                    ],
+                    "_lastExecutionId": "c8c221ed-3b96-4bed-a233-fa195203d339"
+                  }
+                }
+              ]
+            }
+          ],
+          "event": [],
+          "variable": [],
+          "info": {
+            "_postman_id": "771d3a2b-a1fe-4e19-8458-9dc24287ae33",
+            "name": "V2.3 Status Enum Compliance",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+            "description": {
+              "content": "Assertions to enforce status enums across APIs (CloudSyncJob, ExecutionResult).",
+              "type": "text/plain"
+            }
+          }
+        },
+        "cursor": {
+          "position": 0,
+          "iteration": 0,
+          "length": 2,
+          "cycles": 1,
+          "empty": false,
+          "eof": false,
+          "bof": true,
+          "cr": false,
+          "ref": "444568ba-d7d1-4ef6-8c86-6693980f362a",
+          "httpRequestId": "4d5ceb5b-5746-465b-84a3-a42b255cad1c",
+          "scriptId": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+          "execution": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+        }
+      },
+      {
+        "error": {
+          "errno": -4078,
+          "code": "ECONNREFUSED",
+          "syscall": "connect",
+          "address": "127.0.0.1",
+          "port": 8000,
+          "name": "Error",
+          "message": "connect ECONNREFUSED 127.0.0.1:8000",
+          "stack": "Error: connect ECONNREFUSED 127.0.0.1:8000\n    at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1637:16)",
+          "checksum": "fc59a70539da38d1ea1224cc6d2870af",
+          "id": "dbf753ef-8383-4819-9921-e1c8a3552f49",
+          "timestamp": 1756346137726,
+          "stacktrace": [
+            {
+              "fileName": "node:net",
+              "lineNumber": 1637,
+              "functionName": "TCPConnectWrap.afterConnect [as oncomplete]",
+              "typeName": "TCPConnectWrap",
+              "methodName": "afterConnect [as oncomplete]",
+              "columnNumber": 16,
+              "native": false
+            }
+          ]
+        },
+        "at": "request",
+        "source": {
+          "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+          "name": "Memory Sync (202 + CloudSyncJob)",
+          "request": {
+            "url": {
+              "protocol": "http",
+              "port": "8000",
+              "path": [
+                "api",
+                "v2.3-preview",
+                "memory",
+                "sync"
+              ],
+              "host": [
+                "localhost"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "name": "Content-Type",
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "User-Agent",
+                "value": "PostmanRuntime/7.39.1",
+                "system": true
+              },
+              {
+                "key": "Accept",
+                "value": "*/*",
+                "system": true
+              },
+              {
+                "key": "Cache-Control",
+                "value": "no-cache",
+                "system": true
+              },
+              {
+                "key": "Postman-Token",
+                "value": "df77b5b5-49df-4ed5-b023-b56dbb84f0fb",
+                "system": true
+              },
+              {
+                "key": "Host",
+                "value": "localhost:8000",
+                "system": true
+              },
+              {
+                "key": "Accept-Encoding",
+                "value": "gzip, deflate, br",
+                "system": true
+              },
+              {
+                "key": "Connection",
+                "value": "keep-alive",
+                "system": true
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+                "type": "text/javascript",
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                  "  pm.expect([200,201,202,204]).to.include(status);",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);"
+                ]
+              }
+            }
+          ]
+        },
+        "cursor": {
+          "ref": "ca0d9841-b73a-49b1-bb97-530f5674f226",
+          "length": 2,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "eb5d6a0a-c5e2-42b9-b91e-bed970501b87"
+        }
+      },
+      {
+        "error": {
+          "name": "AssertionError",
+          "index": 0,
+          "test": "Accepted (202) or OK (200/201/204) for sync endpoint",
+          "message": "expected [ 200, 201, 202, 204 ] to include undefined",
+          "stack": "AssertionError: expected [ 200, 201, 202, 204 ] to include undefined\n   at Object.eval sandbox-script.js:1:2)",
+          "checksum": "5de7bae6b1fc39a5c7260d76508ef4fe",
+          "id": "c4a23883-1cee-44c2-9fa9-9c4fc1f57266",
+          "timestamp": 1756346137741,
+          "stacktrace": [
+            {
+              "fileName": "sandbox-script.js",
+              "lineNumber": 1,
+              "functionName": "Object.eval",
+              "typeName": "Object",
+              "methodName": "eval",
+              "columnNumber": 2,
+              "native": false
+            }
+          ]
+        },
+        "at": "assertion:0 in test-script",
+        "source": {
+          "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+          "name": "Memory Sync (202 + CloudSyncJob)",
+          "request": {
+            "url": {
+              "path": [
+                "api",
+                "v2.3-preview",
+                "memory",
+                "sync"
+              ],
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "query": [],
+              "variable": []
+            },
+            "header": [
+              {
+                "name": "Content-Type",
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "method": "POST",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+                "type": "text/javascript",
+                "exec": [
+                  "const status = pm.response.code;",
+                  "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                  "  pm.expect([200,201,202,204]).to.include(status);",
+                  "});",
+                  "",
+                  "let json = {};",
+                  "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                  "",
+                  "const DISALLOWED = new Set(['running','success','error']);",
+                  "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                  "",
+                  "function scan(obj) {",
+                  "  if (obj === null || obj === undefined) return;",
+                  "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                  "  if (typeof obj === 'object') {",
+                  "    Object.keys(obj).forEach(k => {",
+                  "      const v = obj[k];",
+                  "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                  "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                  "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                  "      }",
+                  "      scan(v);",
+                  "    });",
+                  "  }",
+                  "}",
+                  "scan(json);"
+                ],
+                "_lastExecutionId": "c8c221ed-3b96-4bed-a233-fa195203d339"
+              }
+            }
+          ]
+        },
+        "parent": {
+          "item": [
+            {
+              "id": "84ef4f74-cff7-476b-a01a-ebb261fc095e",
+              "name": "Agents Status",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v2.3-preview",
+                    "agents",
+                    "status"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "method": "GET"
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "2a5b6609-d3ae-4b88-8d39-0abb8c031be1",
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Response is JSON', function () {",
+                      "  pm.response.to.have.header('Content-Type');",
+                      "});",
+                      "",
+                      "let json = {};",
+                      "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                      "",
+                      "const DISALLOWED = new Set(['running','success','error']);",
+                      "const TASK_ALLOWED = new Set(['pending','in_progress','completed','failed','canceled','timeout']);",
+                      "",
+                      "function scan(obj) {",
+                      "  if (obj === null || obj === undefined) return;",
+                      "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                      "  if (typeof obj === 'object') {",
+                      "    Object.keys(obj).forEach(k => {",
+                      "      const v = obj[k];",
+                      "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                      "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                      "        pm.expect(TASK_ALLOWED.has(v) || v === 'pending' || v === 'in_progress' || v === 'completed' || v === 'failed').to.eql(true, `status not in allowed set: ${v}`);",
+                      "      }",
+                      "      scan(v);",
+                      "    });",
+                      "  }",
+                      "}",
+                      "scan(json);",
+                      "pm.test('No disallowed status values present', function () { pm.expect(true).to.be.true; });"
+                    ],
+                    "_lastExecutionId": "1e183b08-cea4-407c-8071-bb2078fe4c77"
+                  }
+                }
+              ]
+            },
+            {
+              "id": "eec7c00c-bf54-40bc-b9f7-cf1ef4f30100",
+              "name": "Memory Sync (202 + CloudSyncJob)",
+              "request": {
+                "url": {
+                  "path": [
+                    "api",
+                    "v2.3-preview",
+                    "memory",
+                    "sync"
+                  ],
+                  "host": [
+                    "{{baseUrl}}"
+                  ],
+                  "query": [],
+                  "variable": []
+                },
+                "header": [
+                  {
+                    "name": "Content-Type",
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "method": "POST",
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"items\": [ { \"content\": { \"type\": \"note\", \"text\": \"hello\" } } ]\n}"
+                }
+              },
+              "response": [],
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "id": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+                    "type": "text/javascript",
+                    "exec": [
+                      "const status = pm.response.code;",
+                      "pm.test('Accepted (202) or OK (200/201/204) for sync endpoint', function () {",
+                      "  pm.expect([200,201,202,204]).to.include(status);",
+                      "});",
+                      "",
+                      "let json = {};",
+                      "try { json = pm.response.json(); } catch (e) { json = {}; }",
+                      "",
+                      "const DISALLOWED = new Set(['running','success','error']);",
+                      "const JOB_ALLOWED = new Set(['pending','in_progress','completed','failed','timeout','manual_required']);",
+                      "",
+                      "function scan(obj) {",
+                      "  if (obj === null || obj === undefined) return;",
+                      "  if (Array.isArray(obj)) { obj.forEach(scan); return; }",
+                      "  if (typeof obj === 'object') {",
+                      "    Object.keys(obj).forEach(k => {",
+                      "      const v = obj[k];",
+                      "      if (k.toLowerCase() === 'status' && typeof v === 'string') {",
+                      "        pm.expect(DISALLOWED.has(v)).to.eql(false, `status contains disallowed value: ${v}`);",
+                      "        pm.expect(JOB_ALLOWED.has(v)).to.eql(true, `CloudSyncJob.status not in allowed set: ${v}`);",
+                      "      }",
+                      "      scan(v);",
+                      "    });",
+                      "  }",
+                      "}",
+                      "scan(json);"
+                    ],
+                    "_lastExecutionId": "c8c221ed-3b96-4bed-a233-fa195203d339"
+                  }
+                }
+              ]
+            }
+          ],
+          "event": [],
+          "variable": [],
+          "info": {
+            "_postman_id": "771d3a2b-a1fe-4e19-8458-9dc24287ae33",
+            "name": "V2.3 Status Enum Compliance",
+            "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+            "description": {
+              "content": "Assertions to enforce status enums across APIs (CloudSyncJob, ExecutionResult).",
+              "type": "text/plain"
+            }
+          }
+        },
+        "cursor": {
+          "ref": "ca0d9841-b73a-49b1-bb97-530f5674f226",
+          "length": 2,
+          "cycles": 1,
+          "position": 1,
+          "iteration": 0,
+          "httpRequestId": "eb5d6a0a-c5e2-42b9-b91e-bed970501b87",
+          "scriptId": "787bdf4b-9d32-427c-9a7a-d89148e76409",
+          "execution": "c8c221ed-3b96-4bed-a233-fa195203d339"
+        }
+      }
+    ],
+    "error": null
+  }
+}

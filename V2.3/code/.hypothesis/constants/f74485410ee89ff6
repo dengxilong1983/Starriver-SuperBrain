@@ -1,0 +1,4 @@
+# file: C:\星河超脑\星河超脑\V2.3\code\app\errors.py
+# hypothesis_version: 6.138.7
+
+[400, 401, 403, 404, 409, 422, 423, 429, 500, 503, 40000, 40001, 40101, 40301, 40401, 40901, 42301, 42901, 50000, 50301, 'ERROR', 'Validation error', 'WARN', 'code', 'details', 'errors', 'internal error', 'message', 'status', 'trace_id', 'type', 'validation error', 'x-trace-id']

@@ -1,0 +1,4 @@
+# file: C:\星河超脑\星河超脑\V2.3\code\app\routes\health.py
+# hypothesis_version: 6.138.7
+
+['/health', 'health', 'ok', 'service', 'status', 'ts', 'v2.3-api']

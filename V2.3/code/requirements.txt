@@ -1,0 +1,5 @@
+fastapi>=0.111,<0.120
+uvicorn>=0.23,<0.30
+pydantic>=2.7,<3
+typing_extensions>=4.7,<5
+schemathesis>=3.32,<4

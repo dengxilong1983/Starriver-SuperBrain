@@ -1,0 +1,296 @@
+{
+  "info": {
+    "name": "openapi_v2.3-preview",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "function uuidv4() { return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random()*16|0, v = c === 'x' ? r : (r&0x3|0x8); return v.toString(16); }); }",
+          "if (!pm.environment.get('X_REQUEST_ID')) { pm.environment.set('X_REQUEST_ID', uuidv4()); }",
+          "if (!pm.environment.get('IDEMPOTENCY_KEY')) { pm.environment.set('IDEMPOTENCY_KEY', uuidv4()); }"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "Cloud Consent",
+      "item": [
+        {
+          "name": "Create consent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/cloud/consent" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"u_123\",\n  \"scopes\": [\"sync:memory\", \"export:memory\"],\n  \"expiresAt\": \"2025-12-31T23:59:59Z\",\n  \"policyVersion\": \"v1.0\",\n  \"meta\": {\n    \"channel\": \"app\",\n    \"locale\": \"zh-CN\"\n  },\n  \"doubleConfirmToken\": \"REPLACE_WITH_DCTOKEN\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Revoke consent",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/cloud/consent/{{consentId}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"user_revoked\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cloud Status",
+      "request": {
+        "method": "GET",
+        "url": { "raw": "{{BASE_URL}}/cloud/status?userId=u_123" }
+      }
+    },
+    {
+      "name": "Memory",
+      "item": [
+        {
+          "name": "Sync memories",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/memory/sync" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mode\": \"incremental\",\n  \"since\": \"2025-01-01T00:00:00Z\",\n  \"maxItems\": 1000,\n  \"dryRun\": false\n}"
+            }
+          }
+        },
+        {
+          "name": "Export memories",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/memory/export?userId=u_123&format=jsonl&from=2025-01-01T00:00:00Z&to=2025-01-31T23:59:59Z" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agents",
+      "item": [
+        {
+          "name": "Run agents task",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/run" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"task_type\": \"breadth_first_research\",\n  \"query\": \"多智能体系统研究\",\n  \"max_agents\": 4,\n  \"budget\": { \"time_limit\": 600, \"cost_limit\": 1000 },\n  \"quality_threshold\": 0.85\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('status is 202 or 200', function () { pm.expect([200,202]).to.include(pm.response.code); });",
+                  "const data = pm.response.json();",
+                  "pm.test('task_id exists', function () { pm.expect(data.task_id).to.be.a('string'); });",
+                  "if (data.task_id) { pm.environment.set('TASK_ID', data.task_id); }",
+                  "if (data.trace_id) { pm.environment.set('TRACE_ID', data.trace_id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get task status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/tasks/{{TASK_ID}}" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('has status', function () { pm.expect(data.status).to.be.a('string'); });",
+                  "pm.test('status is valid', function () { pm.expect(['pending','in_progress','completed','failed','canceled','timeout']).to.include(data.status); });",
+                  "if (data.task_id) { pm.environment.set('TASK_ID', data.task_id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get task result",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/tasks/{{TASK_ID}}/result" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404', function () { pm.expect([200,404]).to.include(pm.response.code); });",
+                  "if (pm.response.code === 200) {",
+                  "  const data = pm.response.json();",
+                  "  pm.test('has task_id', function () { pm.expect(data.task_id).to.be.a('string'); });",
+                  "  pm.test('status in completed/failed', function () { pm.expect(['completed','failed']).to.include(data.status); });",
+                  "  if (data.status === 'completed') { pm.test('has result.report_content', function () { pm.expect(data).to.have.property('result'); pm.expect(data.result).to.have.property('report_content'); }); }",
+                  "}"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get trace details",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/tasks/{{TASK_ID}}/trace" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('detailed_timeline exists', function () { pm.expect(data).to.have.property('detailed_timeline'); pm.expect(data.detailed_timeline).to.be.an('array'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Cancel task",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/tasks/{{TASK_ID}}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"用户取消\",\n  \"force\": false\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200 or 404', function () { pm.expect([200,404]).to.include(pm.response.code); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agents status",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/status" }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('busy_agents is number', function () { pm.expect(data.busy_agents).to.be.a('number'); });"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Update agents config",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{TOKEN}}" },
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Idempotency-Key", "value": "{{IDEMPOTENCY_KEY}}" },
+              { "key": "X-Request-Id", "value": "{{X_REQUEST_ID}}" }
+            ],
+            "url": { "raw": "{{BASE_URL}}/api/v2.3-preview/agents/config" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"max_concurrent_tasks\": 25,\n  \"default_timeout_seconds\": 300,\n  \"quality_threshold_default\": 0.8,\n  \"budget_limit_per_task\": 2000,\n  \"agent_pool_settings\": {\n    \"LeadResearcher\": {\"max_instances\": 10, \"idle_timeout\": 600},\n    \"SearchAgent\": {\"max_instances\": 20, \"idle_timeout\": 300},\n    \"SynthesisAgent\": {\"max_instances\": 15, \"idle_timeout\": 450},\n    \"CitationAgent\": {\"max_instances\": 10, \"idle_timeout\": 300}\n  }\n}"
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('status is 200', function () { pm.response.to.have.status(200); });",
+                  "const data = pm.response.json();",
+                  "pm.test('contains max_concurrent_tasks', function () { pm.expect(data).to.have.property('max_concurrent_tasks'); });"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

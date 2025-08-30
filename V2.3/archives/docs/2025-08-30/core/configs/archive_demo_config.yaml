@@ -1,0 +1,10 @@
+# 归档演示配置（可安全删除）
+# 说明：用于演示 archive_docs.ps1 对 configs/* 的归档能力
+version: 1
+service:
+  name: demo-service
+  port: 8080
+features:
+  - archiving
+  - reporting
+  - whitelist_suffix

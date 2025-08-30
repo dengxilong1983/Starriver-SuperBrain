@@ -1,0 +1,58 @@
+# Git & VCS
+.git
+.gitignore
+.gitattributes
+
+# Python cache/bytecode
+**/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+.python-version
+
+# Build & packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+
+# Testing artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+coverage/
+
+# Type checking / linters
+.mypy_cache/
+.pytype/
+.pyright/
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+.ipynb_checkpoints/
+
+# Logs & reports (runtime and CI)
+logs/
+reports/
+*.log
+
+# Node/npm (if any submodules use it)
+node_modules/
+
+# Docker
+.dockerignore
+
+# Do NOT ignore these (explicit for clarity)
+!app/
+!data/
+!scripts/
+!requirements.txt
+!tests/

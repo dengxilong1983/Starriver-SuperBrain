@@ -1,0 +1,4 @@
+# file: C:\星河超脑\星河超脑\V2.3\code\app\routes\v2_3\consciousness.py
+# hypothesis_version: 6.138.7
+
+[0.0, 1.0, 2.0, 3.0, 4.0, 400, 409, '/attention', '/state', 'INFO', 'WARN', 'allowed_next_states', 'allowed_states', 'attention_get_total', 'attention_set_total', 'attention_stack_size', 'clear', 'consciousness', 'consciousness_state', 'executing', 'focusing', 'from', 'goal', 'idle', 'illegal transition', 'invalid mode', 'invalid state', 'message', 'mode', 'push', 'reasoning', 'replace', 'sleeping', 'state', 'target', 'to', 'trace_id', 'x-trace-id']
