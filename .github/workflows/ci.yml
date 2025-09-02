@@ -133,7 +133,7 @@ jobs:
               --only "GET /health" \
               --reporter junit --output /data/testing/dredd/junit_health_swagger2.xml
 
-      - name: Diagnostics - list reports & schemathesis version
+      - name: "Diagnostics - list reports & schemathesis version"
         if: always()
         run: |
           docker run --rm -w /app \
