@@ -13,3 +13,27 @@ jobs:
     steps:
       - name: Hello
         run: echo "hello from minimal ci.yml"
+
+  preflight:
+    name: "Preflight - Sanity & Artifacts"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate run_info
+        run: |
+          mkdir -p preflight
+          echo "run_id=${{ github.run_id }}" > preflight/run_info.txt
+          echo "sha=${{ github.sha }}" >> preflight/run_info.txt
+          echo "ref=${{ github.ref }}" >> preflight/run_info.txt
+          echo "event=${{ github.event_name }}" >> preflight/run_info.txt
+          echo "runner_os=${{ runner.os }}" >> preflight/run_info.txt
+          echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> preflight/run_info.txt
+
+      - name: Upload Preflight artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-${{ github.run_id }}
+          path: preflight/run_info.txt
+          if-no-files-found: error
