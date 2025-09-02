@@ -66,12 +66,13 @@ jobs:
         working-directory: code
         run: |
           mkdir -p reports/testing
-          # 运行测试；即使失败也继续，以便上传报告
           pytest -q --disable-warnings --maxfail=1 \
             --junitxml=reports/testing/junit.xml \
-            --cov=. --cov-report=xml:reports/testing/coverage.xml || true
+            --cov=. --cov-report=xml:reports/testing/coverage.xml \
+            --cov-fail-under=85
 
       - name: Upload test reports
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
           name: junit-code-${{ github.run_id }}
