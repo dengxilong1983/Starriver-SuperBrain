@@ -65,7 +65,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            bash -lc "schemathesis run file:///app/reports/testing/openapi/latest.json --app=app.main:app --checks all --experimental=openapi-3.1 --include-path '^/health$' --include-method GET --junit-xml /app/reports/testing/schemathesis/junit_health.xml"
+            schemathesis run file:///app/reports/testing/openapi/latest.json --app=app.main:app --checks all --experimental=openapi-3.1 --include-path ^/health$ --include-method GET --junit-xml /app/reports/testing/schemathesis/junit_health.xml
 
       - name: Run Dredd contract tests (host network)
         run: |
