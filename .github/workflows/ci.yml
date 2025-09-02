@@ -83,7 +83,7 @@ jobs:
           fi
 
       - name: Snapshot server diagnostics to artifacts
-        if: always()
+        if: ${{ always() }}
         run: |
           docker ps -a > code/reports/testing/docker_ps.txt || true
           docker inspect superbrain-api > code/reports/testing/server.inspect.json || true
@@ -135,7 +135,7 @@ jobs:
               --reporter junit --output /data/testing/dredd/junit_health_swagger2.xml
 
       - name: "Diagnostics - list reports & schemathesis version"
-        if: always()
+        if: ${{ always() }}
         run: |
           docker run --rm -w /app \
             -v "${{ github.workspace }}/code:/app" \
@@ -144,7 +144,7 @@ jobs:
             sh -lc "python -V; which schemathesis || true; schemathesis --version || true; ls -R /app/reports/testing || true"
 
       - name: Diagnostics - server logs (console)
-        if: always()
+        if: ${{ always() }}
         run: |
           docker logs --tail 200 superbrain-api || true
 
@@ -159,7 +159,7 @@ jobs:
 
       - name: Upload artifacts (health schemas)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ always() }}
         with:
           name: ci-reports-health-${{ github.run_id }}
           path: |
@@ -168,13 +168,13 @@ jobs:
           if-no-files-found: warn
 
       - name: Stop ASGI server container
-        if: always()
+        if: ${{ always() }}
         run: |
           docker rm -f superbrain-api || true
 
       - name: Upload artifacts (JUnit, coverage, OpenAPI, Schemathesis, server logs)
         uses: actions/upload-artifact@v4
-        if: always()
+        if: ${{ always() }}
         with:
           name: ci-reports-${{ github.run_id }}
           path: |
