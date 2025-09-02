@@ -13,7 +13,7 @@ jobs:
   test-and-contract:
     name: Container PyTest + Coverage + OpenAPI + Schemathesis
     runs-on: ubuntu-latest
-    if: ${{ false }}
+    if: false
     # removed permissions block
     steps:
       - name: Checkout
