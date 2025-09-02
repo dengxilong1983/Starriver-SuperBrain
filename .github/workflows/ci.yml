@@ -69,6 +69,14 @@ jobs:
             superbrain-ci:test \
             uvicorn app.main:app --host 127.0.0.1 --port 8000
 
+      - name: Wait for ASGI health
+        run: |
+          for i in {1..20}; do
+            if curl -fsS http://127.0.0.1:8000/health > /dev/null; then
+              echo "ASGI is up"; break; fi
+            echo "Waiting for ASGI... ($i)"; sleep 1;
+          done
+
       - name: Run Schemathesis against exported schema with in-process ASGI app
         run: |
           docker run --rm \
@@ -113,6 +121,20 @@ jobs:
             dredd /data/testing/openapi/health_swagger2.json http://127.0.0.1:8000 \
               --only "GET /health" \
               --reporter junit --output /data/testing/dredd/junit_health_swagger2.xml
+
+      - name: Diagnostics - list reports & schemathesis version
+        if: always()
+        run: |
+          docker run --rm -w /app \
+            -v "${{ github.workspace }}/code:/app" \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            sh -lc "python -V; which schemathesis || true; schemathesis --version || true; ls -R /app/reports/testing || true"
+
+      - name: Diagnostics - server logs
+        if: always()
+        run: |
+          docker logs --tail 200 superbrain-api || true
 
       - name: Sum JUnit and Gate
         run: |
