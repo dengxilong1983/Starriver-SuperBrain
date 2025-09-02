@@ -58,7 +58,7 @@ jobs:
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python /app/scripts/export_openapi.py --out-dir /app/reports/testing/openapi
+            python -c "import json,os; from app.main import app; schema=app.openapi(); os.makedirs('reports/testing/openapi', exist_ok=True); open('reports/testing/openapi/latest.json','w',encoding='utf-8').write(json.dumps(schema, ensure_ascii=False, indent=2))"
 
       - name: Start ASGI server (host network)
         run: |
@@ -94,7 +94,7 @@ jobs:
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python /app/scripts/gen_health_v30.py
+            python -c "import json,os; src='reports/testing/openapi/latest.json'; d=json.load(open(src,'r',encoding='utf-8')); info=d.get('info',{'title':'API','version':'1.0.0'}); paths=d.get('paths',{}); health=paths.get('/health'); os.makedirs('reports/testing/openapi',exist_ok=True); v3={'openapi':'3.0.3','info':info,'paths':({'/health':health} if health else {})};\ntry:\n import sys\n content=v3['paths']['/health']['get']['responses']['200'].get('content',{})\n if isinstance(content,dict) and 'application/json' in content and not content['application/json'].get('schema'): content['application/json']['schema']={'type':'object'}\nexcept Exception: pass\nopen('reports/testing/openapi/health_v30.json','w',encoding='utf-8').write(json.dumps(v3, ensure_ascii=False, indent=2)); sw={'swagger':'2.0','info':info,'paths':{}};\nif health:\n get=health.get('get',{})\n resp=get.get('responses',{}).get('200',{})\n desc=resp.get('description','OK')\n schema=None\n content=resp.get('content')\n if isinstance(content,dict) and 'application/json' in content: schema=content['application/json'].get('schema')\n sw['paths']['/health']={'get':{'produces':['application/json'],'responses':{'200':{'description':desc}}}}\n if schema: sw['paths']['/health']['get']['responses']['200']['schema']=schema\nopen('reports/testing/openapi/health_swagger2.json','w',encoding='utf-8').write(json.dumps(sw, ensure_ascii=False, indent=2))"
 
       - name: Run Dredd (OpenAPI 3.0 -> junit_health_oas3.xml)
         run: |
