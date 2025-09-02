@@ -1,0 +1,103 @@
+name: "Daily Report & Archival"
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 1 * * *'  # Every day at 01:00 UTC
+
+jobs:
+  daily:
+    name: Nightly Tests + Contract + Reports
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+      id-token: write
+      statuses: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        working-directory: code
+        run: |
+          docker build --target test -t superbrain-ci:test -f Dockerfile .
+
+      - name: "Ensure reports & data dirs on host"
+        run: |
+          mkdir -p code/reports/testing/openapi
+          mkdir -p code/reports/testing/schemathesis
+          mkdir -p code/reports/daily
+          mkdir -p code/reports/shadow
+          mkdir -p code/data/enhanced_memory/snapshots
+          mkdir -p code/data/shadow
+
+      - name: Run pytest with coverage in container (nightly)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            pytest -q \
+              --junitxml=reports/testing/junit.xml \
+              --cov=app --cov-report=xml:reports/testing/coverage.xml
+
+      - name: Export OpenAPI schema (timestamped + latest)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python scripts/export_openapi.py --out-dir reports/testing/openapi
+
+      - name: Run Schemathesis against exported schema with in-process ASGI app
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            bash -lc "schemathesis run file:///app/reports/testing/openapi/latest.json --app=app.main:app --checks all --junit-xml /app/reports/testing/schemathesis/junit.xml"
+
+      - name: Archive SLO snapshot
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/data:/app/data" \
+            superbrain-ci:test \
+            python scripts/archive_slo_snapshot.py --out-dir data/enhanced_memory/snapshots
+
+      - name: Run shadow diff pipeline
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/data:/app/data" \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python scripts/shadow_diff_pipeline.py --baseline data/shadow/baseline.jsonl --candidate data/shadow/candidate.jsonl --output-dir reports/shadow
+
+      - name: Enforce shadow diff acceptance threshold
+        env:
+          SHADOW_ACCEPTANCE_MIN: 0.95
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            bash -lc "python - <<'PY'\nimport json, os, sys\np = '/app/reports/shadow/summary.json'\ntry:\n    with open(p, 'r', encoding='utf-8') as f:\n        s = json.load(f)\nexcept Exception as e:\n    print(f'[warn] cannot read {p}: {e}')\n    # 若无影子数据则跳过门禁\n    sys.exit(0)\nminv = float(os.getenv('SHADOW_ACCEPTANCE_MIN', '0.95'))\nrate = float(s.get('acceptance_rate', 0))\nprint(f'acceptance_rate={rate:.3f} (min={minv:.3f})')\nif rate < minv:\n    print('Shadow diff acceptance below threshold, failing job.')\n    sys.exit(1)\nPY"
+
+      - name: Generate daily alignment
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python scripts/generate_daily_alignment.py --reports-dir reports/testing --output-dir reports/daily
+
+      - name: Upload artifacts (Daily alignment, SLO snapshots, Shadow reports)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: daily-reports-${{ github.run_id }}
+          path: |
+            code/reports/daily/
+            code/reports/shadow/
+            code/data/enhanced_memory/snapshots/
+          if-no-files-found: warn

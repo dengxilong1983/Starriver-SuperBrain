@@ -1,0 +1,82 @@
+name: "CI - Minimal Hello"
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - ci/**
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  hello:
+    name: "Sanity Hello"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hello
+        run: echo "hello from minimal ci.yml"
+
+  preflight:
+    name: "Preflight - Sanity & Artifacts"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate run_info
+        run: |
+          mkdir -p preflight
+          echo "run_id=${{ github.run_id }}" > preflight/run_info.txt
+          echo "sha=${{ github.sha }}" >> preflight/run_info.txt
+          echo "ref=${{ github.ref }}" >> preflight/run_info.txt
+          echo "event=${{ github.event_name }}" >> preflight/run_info.txt
+          echo "runner_os=${{ runner.os }}" >> preflight/run_info.txt
+          echo "time=$(date -u +'%Y-%m-%dT%H:%M:%SZ')" >> preflight/run_info.txt
+
+      - name: Upload Preflight artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: preflight-${{ github.run_id }}
+          path: preflight/run_info.txt
+          if-no-files-found: error
+
+  tests:
+    name: "Python Tests (code/)"
+    runs-on: ubuntu-latest
+    # 在 workflow_dispatch、ci/** 分支 push 和 PR 到 main 时运行
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/ci/') || github.event_name == 'pull_request' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          if [ -f code/requirements.txt ]; then pip install -r code/requirements.txt; fi
+          # 确保测试与覆盖率插件可用
+          pip install pytest pytest-cov
+
+      - name: Run pytest in code/
+        working-directory: code
+        run: |
+          mkdir -p reports/testing
+          pytest -q --disable-warnings --maxfail=1 \
+            --junitxml=reports/testing/junit.xml \
+            --cov=. --cov-report=xml:reports/testing/coverage.xml \
+            --cov-fail-under=85
+
+      - name: Upload test reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-code-${{ github.run_id }}
+          path: |
+            code/reports/testing/junit.xml
+            code/reports/testing/coverage.xml
+          if-no-files-found: warn
