@@ -13,13 +13,7 @@ jobs:
   test-and-contract:
     name: Container PyTest + Coverage + OpenAPI + Schemathesis
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read
-      checks: write
-      pull-requests: write
-      id-token: write
-      statuses: write
+    # removed permissions block
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -192,9 +186,7 @@ jobs:
   preflight:
     name: Preflight - Sanity & Artifacts
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
+    # removed permissions block
     steps:
       - name: Checkout
         uses: actions/checkout@v4
