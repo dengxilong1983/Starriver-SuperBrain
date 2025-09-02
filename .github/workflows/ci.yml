@@ -5,6 +5,9 @@ on:
   push:
     branches:
       - ci/**
+  pull_request:
+    branches:
+      - main
 
 jobs:
   hello:
@@ -41,8 +44,8 @@ jobs:
   tests:
     name: "Python Tests (code/)"
     runs-on: ubuntu-latest
-    # 仅在 ci/** 分支 push 或手动触发时运行
-    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/ci/') }}
+    # 在 workflow_dispatch、ci/** 分支 push 和 PR 到 main 时运行
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/ci/') || github.event_name == 'pull_request' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
