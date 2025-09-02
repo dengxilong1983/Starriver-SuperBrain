@@ -54,7 +54,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python -m scripts.export_openapi --out-dir reports/testing/openapi
+            python scripts/export_openapi.py --out-dir reports/testing/openapi
 
       - name: Start ASGI server (host network)
         run: |
@@ -84,7 +84,7 @@ jobs:
           docker run --rm \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python -m scripts.gen_health_v30
+            python scripts/gen_health_v30.py
 
       - name: Run Dredd (OpenAPI 3.0 -> junit_health_oas3.xml)
         run: |
