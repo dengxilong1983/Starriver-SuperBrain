@@ -37,3 +37,37 @@ jobs:
           name: preflight-${{ github.run_id }}
           path: preflight/run_info.txt
           if-no-files-found: error
+
+  tests:
+    name: "Python Tests (code/)"
+    runs-on: ubuntu-latest
+    # 仅在 ci/** 分支 push 或手动触发时运行
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/heads/ci/') }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip wheel
+          if [ -f code/requirements.txt ]; then pip install -r code/requirements.txt; fi
+
+      - name: Run pytest in code/
+        working-directory: code
+        run: |
+          mkdir -p reports/testing
+          # 运行测试；即使失败也继续，以便上传报告
+          pytest -q --disable-warnings --maxfail=1 --junitxml=reports/testing/junit.xml || true
+
+      - name: Upload test reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-code-${{ github.run_id }}
+          path: |
+            code/reports/testing/junit.xml
+          if-no-files-found: warn
