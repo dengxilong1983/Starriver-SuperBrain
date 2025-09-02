@@ -28,7 +28,7 @@ jobs:
         run: |
           docker build --target test -t superbrain-ci:test -f Dockerfile .
 
-      - name: Ensure reports & data dirs on host
+      - name: "Ensure reports & data dirs on host"
         run: |
           mkdir -p code/reports/testing/openapi
           mkdir -p code/reports/testing/schemathesis
