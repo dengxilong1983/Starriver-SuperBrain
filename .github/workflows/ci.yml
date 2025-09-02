@@ -42,6 +42,7 @@ jobs:
         continue-on-error: true
         run: |
           docker run --rm \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
@@ -53,15 +54,17 @@ jobs:
       - name: Export OpenAPI schema (timestamped + latest)
         run: |
           docker run --rm \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python scripts/export_openapi.py --out-dir reports/testing/openapi
+            python /app/scripts/export_openapi.py --out-dir /app/reports/testing/openapi
 
       - name: Start ASGI server (host network)
         run: |
           docker rm -f superbrain-api || true
           docker run -d --name superbrain-api --network host \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             superbrain-ci:test \
             uvicorn app.main:app --host 127.0.0.1 --port 8000
@@ -69,6 +72,7 @@ jobs:
       - name: Run Schemathesis against exported schema with in-process ASGI app
         run: |
           docker run --rm \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
@@ -86,10 +90,11 @@ jobs:
       - name: Generate health_v30.json & health_swagger2.json
         run: |
           docker run --rm \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python scripts/gen_health_v30.py
+            python /app/scripts/gen_health_v30.py
 
       - name: Run Dredd (OpenAPI 3.0 -> junit_health_oas3.xml)
         run: |
@@ -112,10 +117,11 @@ jobs:
       - name: Sum JUnit and Gate
         run: |
           docker run --rm \
+            -w /app \
             -v "${{ github.workspace }}/code:/app" \
             -v "${{ github.workspace }}/code/reports:/app/reports" \
             superbrain-ci:test \
-            python tools/sum_junit.py
+            python /app/tools/sum_junit.py
 
       - name: Upload artifacts (health schemas)
         uses: actions/upload-artifact@v4
