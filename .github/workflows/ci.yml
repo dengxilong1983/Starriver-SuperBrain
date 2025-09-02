@@ -1,4 +1,4 @@
-name: CI - Tests & Contract
+name: "CI - Tests & Contract"
 
 on:
   workflow_dispatch:
@@ -103,7 +103,7 @@ jobs:
               --only "GET /health" \
               --reporter junit --output /data/testing/dredd/junit.xml
 
-      - name: Generate health_v30.json & health_swagger2.json
+      - name: "Generate health_v30.json & health_swagger2.json"
         run: |
           docker run --rm \
             -w /app \
@@ -185,7 +185,7 @@ jobs:
           if-no-files-found: warn
 
   preflight:
-    name: Preflight - Sanity & Artifacts
+    name: "Preflight - Sanity & Artifacts"
     runs-on: ubuntu-latest
     # removed permissions block
     steps:
