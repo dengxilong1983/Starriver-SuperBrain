@@ -9,9 +9,7 @@ on:
       - main
       - ci/**
 
-permissions:
-  contents: read
-  actions: write
+# permissions: inherit (use repository defaults)
 
 jobs:
   test-and-contract:
