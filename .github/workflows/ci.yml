@@ -1,0 +1,137 @@
+name: CI - Tests & Contract
+
+on:
+  pull_request:
+    branches: [ main, master ]
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-contract:
+    name: Container PyTest + Coverage + OpenAPI + Schemathesis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+      id-token: write
+      statuses: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build test image
+        working-directory: code
+        run: |
+          docker build --target test -t superbrain-ci:test -f Dockerfile .
+
+      - name: Ensure reports dirs on host
+        run: |
+          mkdir -p code/reports/testing/openapi
+          mkdir -p code/reports/testing/schemathesis
+          mkdir -p code/reports/testing/dredd
+
+      - name: Run pytest with coverage in container (soft gate: cov>=85%, non-blocking)
+        continue-on-error: true
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            pytest -q \
+              --junitxml=reports/testing/junit.xml \
+              --cov=app --cov-report=xml:reports/testing/coverage.xml \
+              --cov-fail-under=85
+
+      - name: Export OpenAPI schema (timestamped + latest)
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python -m scripts.export_openapi --out-dir reports/testing/openapi
+
+      - name: Start ASGI server (host network)
+        run: |
+          docker rm -f superbrain-api || true
+          docker run -d --name superbrain-api --network host \
+            superbrain-ci:test \
+            uvicorn app.main:app --host 127.0.0.1 --port 8000
+
+      - name: Run Schemathesis against exported schema with in-process ASGI app
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            bash -lc "schemathesis run file:///app/reports/testing/openapi/latest.json --app=app.main:app --checks all --experimental=openapi-3.1 --include-path '^/health$' --include-method GET --junit-xml /app/reports/testing/schemathesis/junit_health.xml"
+
+      - name: Run Dredd contract tests (host network)
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}/code/reports:/data" \
+            apiaryio/dredd:latest \
+            dredd /data/testing/openapi/latest.json http://127.0.0.1:8000 \
+              --only "GET /health" \
+              --reporter junit --output /data/testing/dredd/junit.xml
+
+      - name: Generate health_v30.json & health_swagger2.json
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python -m scripts.gen_health_v30
+
+      - name: Run Dredd (OpenAPI 3.0 -> junit_health_oas3.xml)
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}/code/reports:/data" \
+            apiaryio/dredd:latest \
+            dredd /data/testing/openapi/health_v30.json http://127.0.0.1:8000 \
+              --only "GET /health" \
+              --reporter junit --output /data/testing/dredd/junit_health_oas3.xml
+
+      - name: Run Dredd (Swagger 2.0 -> junit_health_swagger2.xml)
+        run: |
+          docker run --rm --network host \
+            -v "${{ github.workspace }}/code/reports:/data" \
+            apiaryio/dredd:latest \
+            dredd /data/testing/openapi/health_swagger2.json http://127.0.0.1:8000 \
+              --only "GET /health" \
+              --reporter junit --output /data/testing/dredd/junit_health_swagger2.xml
+
+      - name: Sum JUnit and Gate
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}/code/reports:/app/reports" \
+            superbrain-ci:test \
+            python tools/sum_junit.py
+
+      - name: Upload artifacts (health schemas)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-reports-health-${{ github.run_id }}
+          path: |
+            code/reports/testing/openapi/health_v30.json
+            code/reports/testing/openapi/health_swagger2.json
+          if-no-files-found: warn
+
+      - name: Stop ASGI server container
+        if: always()
+        run: |
+          docker rm -f superbrain-api || true
+
+      - name: Upload artifacts (JUnit, coverage, OpenAPI, Schemathesis)
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-reports-${{ github.run_id }}
+          path: |
+            code/reports/testing/junit.xml
+            code/reports/testing/coverage.xml
+            code/reports/testing/openapi/
+            code/reports/testing/schemathesis/
+            code/reports/testing/dredd/
+          if-no-files-found: warn
