@@ -212,3 +212,10 @@ jobs:
           name: preflight-${{ github.run_id }}
           path: preflight/run_info.txt
           if-no-files-found: error
+
+  hello:
+    name: "Sanity Hello"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Hello
+        run: echo "hello from ci.yml"
