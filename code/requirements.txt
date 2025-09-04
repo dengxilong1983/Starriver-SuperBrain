@@ -2,3 +2,15 @@ fastapi>=0.111,<0.120
 uvicorn>=0.23,<0.30
 pydantic>=2.7,<3
 typing_extensions>=4.7,<5
+# Test dependencies
+requests>=2.31,<3
+httpx>=0.24,<1
+pytest>=7,<9
+pytest-cov>=4,<6
+schemathesis>=3.20,<4
+# Observability / OpenTelemetry (optional, enabled via env)
+opentelemetry-api>=1.21,<2
+opentelemetry-sdk>=1.21,<2
+opentelemetry-exporter-otlp>=1.21,<2
+opentelemetry-instrumentation-fastapi>=0.41b0,<1
+opentelemetry-instrumentation-logging>=0.41b0,<1
