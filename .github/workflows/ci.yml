@@ -80,3 +80,82 @@ jobs:
             code/reports/testing/junit.xml
             code/reports/testing/coverage.xml
           if-no-files-found: warn
+
+  contract:
+    name: "Contract Tests (OpenAPI · Schemathesis · Dredd)"
+    runs-on: ubuntu-latest
+    needs: [tests]
+    # 首轮以观察为主，暂不阻断 PR；待基线稳定后可去掉 continue-on-error
+    continue-on-error: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js (for Dredd)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip wheel
+          pip install -r code/requirements.txt
+
+      - name: Install Dredd (npm)
+        working-directory: code
+        run: |
+          npm init -y >/dev/null 2>&1 || true
+          npm install --no-audit --no-fund --save-dev dredd@^14.1.0
+
+      - name: Launch API server (uvicorn)
+        working-directory: code
+        run: |
+          nohup python -m uvicorn app.main:create_app --factory --host 127.0.0.1 --port 8000 --log-level warning &
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:8000/openapi.json >/dev/null 2>&1; then echo "API ready"; break; fi
+            sleep 1
+          done
+
+      - name: Fetch OpenAPI schema
+        working-directory: code
+        run: |
+          mkdir -p reports/testing/openapi
+          curl -fsS http://127.0.0.1:8000/openapi.json -o openapi_dump.json
+          cp openapi_dump.json reports/testing/openapi/latest.json
+
+      - name: Check operationId uniqueness
+        working-directory: code
+        run: |
+          python tools/opid_check.py --input openapi_dump.json --fail-on-duplicates
+
+      - name: Run Schemathesis
+        working-directory: code
+        run: |
+          mkdir -p reports/testing/schemathesis
+          schemathesis run http://127.0.0.1:8000/openapi.json \
+            --base-url=http://127.0.0.1:8000 \
+            --junit-xml=reports/testing/schemathesis/junit.xml \
+            --checks=all || true
+
+      - name: Run Dredd
+        working-directory: code
+        run: |
+          mkdir -p reports/testing/dredd
+          npx -y dredd http://127.0.0.1:8000/openapi.json http://127.0.0.1:8000 \
+            --reporter junit --output reports/testing/dredd/junit.xml || true
+
+      - name: Upload contract artifacts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: contract-reports-${{ github.run_id }}
+          path: |
+            code/reports/testing/openapi/latest.json
+            code/reports/testing/schemathesis/junit.xml
+            code/reports/testing/dredd/junit.xml
+          if-no-files-found: warn
