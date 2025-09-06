@@ -87,6 +87,7 @@ jobs:
     needs: [tests]
     # 首轮以观察为主，暂不阻断 PR；待基线稳定后可去掉 continue-on-error
     continue-on-error: true
+    if: ${{ always() }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
