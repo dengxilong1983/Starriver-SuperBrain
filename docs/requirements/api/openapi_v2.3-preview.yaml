@@ -1,654 +1,5533 @@
-openapi: 3.0.3
+openapi: 3.1.0
 info:
-  title: 星河超脑 API
+  title: Starriver SuperBrain API
+  description: Minimal runnable V2.3 API skeleton
   version: v2.3-preview
-  description: |
-    预览版接口契约（v2.3-preview）。涵盖云端授权、状态查询、记忆同步与导出四个核心端点。
-    注意：预览版仅用于联调与契约测试，正式发布前可能小幅调整但保持向后兼容。
-servers:
-  - url: http://127.0.0.1:8230/api/v2.3-preview
-    description: 本地开发（FastAPI）
-  - url: https://api.starrymind.example.com/api/v2.3-preview
-    description: 预览环境（示例）
-security:
-  - bearerAuth: []
+servers: {}
 paths:
-  /cloud/consent:
-    post:
-      summary: 创建或更新云端授权
-      operationId: createConsent
-      tags: [cloud]
-      parameters:
-        - in: header
-          name: Idempotency-Key
-          schema: { type: string, maxLength: 64 }
-          required: false
-          description: 幂等键，确保重试时不重复创建
-        - $ref: '#/components/parameters/X-Request-Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [scopes]
-              properties:
-                scopes:
-                  type: array
-                  items: { $ref: '#/components/schemas/ConsentScope' }
-                expiresAt:
-                  type: string
-                  format: date-time
-                  nullable: true
-      responses:
-        '201':
-          description: 授权已创建
-          headers:
-            RateLimit-Limit: { $ref: '#/components/headers/RateLimit-Limit' }
-            RateLimit-Remaining: { $ref: '#/components/headers/RateLimit-Remaining' }
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Consent' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/ServerError' }
-    delete:
-      summary: 撤销云端授权
-      operationId: revokeConsent
-      tags: [cloud]
-      parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                reason:
-                  type: string
-                  enum: [user_initiated, expired, policy_update, other]
-      responses:
-        '200':
-          description: 授权已撤销
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Consent' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /cloud/status:
+  /health:
     get:
-      summary: 查询云端授权与同步状态
-      operationId: getCloudStatus
-      tags: [cloud]
-      parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
+      tags:
+      - health
+      summary: Health
+      operationId: get_health
       responses:
         '200':
-          description: 当前云端状态
+          description: Successful Response
           content:
             application/json:
-              schema:
-                type: object
-                properties:
-                  active: { type: boolean }
-                  expiresAt: { type: string, format: date-time, nullable: true }
-                  lastJob: { $ref: '#/components/schemas/CloudSyncJob', nullable: true }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /memory/sync:
-    post:
-      summary: 端→云记忆增量同步
-      operationId: syncMemory
-      tags: [memory]
-      parameters:
-        - in: header
-          name: Idempotency-Key
-          schema: { type: string, maxLength: 64 }
-          required: false
-          description: 幂等键，保证重复提交只处理一次
-        - $ref: '#/components/parameters/X-Request-Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [clientCommitId, items]
-              properties:
-                clientCommitId: { type: string }
-                items:
-                  type: array
-                  items: { $ref: '#/components/schemas/MemoryChange' }
-      responses:
-        '202':
-          description: 同步作业已受理
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/CloudSyncJob' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /memory/export:
+              schema: {}
+  /api/v2.3-preview/consciousness/attention:
     get:
-      summary: 导出云端记忆（脱敏）
-      operationId: exportMemory
-      tags: [memory]
+      tags:
+      - consciousness
+      summary: Get Attention
+      operationId: get_api_v2_3_preview_consciousness_attention
       parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-        - in: query
-          name: format
-          schema: { type: string, enum: [jsonl, zip] }
-          required: false
-          description: 导出格式，默认 jsonl
-      responses:
-        '200':
-          description: 导出任务完成（预签名下载链接）
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [downloadUrl]
-                properties:
-                  downloadUrl: { type: string, format: uri }
-                  expiresAt: { type: string, format: date-time }
-                  checksum: { type: string, description: 'sha256' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/run:
-    post:
-      summary: 启动多智能体研究任务
-      operationId: runAgents
-      tags: [agents]
-      parameters:
-        - in: header
-          name: Idempotency-Key
-          schema: { type: string, maxLength: 64 }
-          required: false
-          description: 幂等键，避免重复提交相同任务
-        - $ref: '#/components/parameters/X-Request-Id'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/AgentsRunRequest' }
-      responses:
-        '200':
-          description: 任务已启动（可能包含即时结果或运行中状态）
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/AgentsRunResponse' }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '429': { $ref: '#/components/responses/TooManyRequests' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/status:
-    get:
-      summary: Agent状态监控
-      operationId: getAgentsStatus
-      tags: [agents]
-      parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-      responses:
-        '200':
-          description: 系统中所有Agent的健康状态、负载情况、性能指标
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  system_status: { type: string, enum: [healthy, degraded, critical] }
-                  busy_agents: { type: integer, minimum: 0 }
-                  max_agents: { type: integer, minimum: 0 }
-                  agents:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        agent_id: { type: string }
-                        type: { type: string }
-                        status: { type: string, enum: [idle, busy, error, maintenance] }
-                        current_task_id: { type: string, nullable: true }
-                        cpu_usage: { type: number, minimum: 0, maximum: 1 }
-                        memory_usage_mb: { type: number, minimum: 0 }
-                        tasks_completed_today: { type: integer, minimum: 0 }
-                        average_task_duration_seconds: { type: number, minimum: 0 }
-                        last_heartbeat: { type: string, format: date-time }
-                  system_metrics:
-                    type: object
-                    properties:
-                      tasks_in_queue: { type: integer, minimum: 0 }
-                      average_wait_time_seconds: { type: number, minimum: 0 }
-                      success_rate_24h: { type: number, minimum: 0, maximum: 1 }
-                      error_rate_24h: { type: number, minimum: 0, maximum: 1 }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/tasks/{task_id}:
-    parameters:
-      - in: path
-        name: task_id
-        required: true
-        schema: { type: string }
-    get:
-      summary: 任务状态查询
-      operationId: getAgentsTaskStatus
-      tags: [agents]
-      parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-      responses:
-        '200':
-          description: 指定任务的实时执行状态与进度
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  task_id: { type: string }
-                  status: { type: string, enum: [pending, in_progress, completed, failed, canceled, timeout] }
-                  progress: { type: number, minimum: 0, maximum: 1 }
-                  current_phase: { type: string }
-                  agents_status:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        agent_id: { type: string }
-                        status: { type: string, enum: [pending, in_progress, completed, failed, canceled, timeout] }
-                        completion_time: { type: string, format: date-time, nullable: true }
-                        output_summary: { type: string, nullable: true }
-                  budget_used: { type: number, minimum: 0 }
-                  budget_remaining: { type: number, minimum: 0 }
-                  intermediate_results:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        phase: { type: string }
-                        content_preview: { type: string }
-                        quality_score: { type: number, minimum: 0, maximum: 1 }
-                  estimated_completion: { type: string, format: date-time, nullable: true }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/ServerError' }
-    delete:
-      summary: 任务取消
-      operationId: cancelAgentsTask
-      tags: [agents]
-      parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-      requestBody:
+      - name: require_current
+        in: query
         required: false
+        schema:
+          type: boolean
+          default: false
+          title: Require Current
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttentionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - consciousness
+      summary: Set Attention
+      operationId: post_api_v2_3_preview_consciousness_attention
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AttentionRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttentionResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/consciousness/state:
+    get:
+      tags:
+      - consciousness
+      summary: Get State
+      operationId: get_api_v2_3_preview_consciousness_state
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - consciousness
+      summary: Set State
+      operationId: post_api_v2_3_preview_consciousness_state
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/StateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/sync:
+    post:
+      tags:
+      - memory
+      summary: Memory Sync
+      operationId: post_api_v2_3_preview_memory_sync
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemorySyncRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemorySyncResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/export:
+    get:
+      tags:
+      - memory
+      summary: Memory Export
+      operationId: get_api_v2_3_preview_memory_export
+      parameters:
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 1000
+          minimum: 1
+          default: 100
+          title: Limit
+      - name: since_seconds
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          title: Since Seconds
+      - name: anonymize
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Anonymize
+      - name: exclude_fields
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: array
+            items:
+              type: string
+          - type: 'null'
+          title: Exclude Fields
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryExportResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - memory
+      summary: Memory Export Post
+      operationId: post_api_v2_3_preview_memory_export
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryExportRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryExportResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/changes:
+    get:
+      tags:
+      - memory
+      summary: Memory Changes
+      operationId: get_api_v2_3_preview_memory_changes
+      parameters:
+      - name: since_seq
+        in: query
+        required: false
+        schema:
+          type: integer
+          minimum: 0
+          default: 0
+          title: Since Seq
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 2000
+          minimum: 1
+          default: 200
+          title: Limit
+      - name: include_content
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Include Content
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryChangesResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/import:
+    post:
+      tags:
+      - memory
+      summary: Memory Import
+      operationId: post_api_v2_3_preview_memory_import
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryImportRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryImportResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/layers:
+    get:
+      tags:
+      - memory
+      summary: Memory Layers
+      operationId: get_api_v2_3_preview_memory_layers
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryLayersResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/snapshot:
+    post:
+      tags:
+      - memory
+      summary: Memory Snapshot
+      operationId: post_api_v2_3_preview_memory_snapshot
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemorySnapshotResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/rollback:
+    post:
+      tags:
+      - memory
+      summary: Memory Rollback
+      operationId: post_api_v2_3_preview_memory_rollback
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MemoryRollbackRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryRollbackResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/memory/consistency:
+    get:
+      tags:
+      - memory
+      summary: Memory Consistency
+      operationId: get_api_v2_3_preview_memory_consistency
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MemoryConsistencyResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/reasoning/plan:
+    post:
+      tags:
+      - reasoning
+      summary: Create Plan
+      operationId: post_api_v2_3_preview_reasoning_plan
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PlanRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/reasoning/plan/{plan_id}:
+    get:
+      tags:
+      - reasoning
+      summary: Get Plan
+      operationId: get_api_v2_3_preview_reasoning_plan_plan_id
+      parameters:
+      - name: plan_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Plan Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanDetailResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/reasoning/plan/{plan_id}/trace:
+    get:
+      tags:
+      - reasoning
+      summary: Get Plan Trace
+      operationId: get_api_v2_3_preview_reasoning_plan_plan_id_trace
+      parameters:
+      - name: plan_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Plan Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlanTraceResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/execution/act:
+    post:
+      tags:
+      - execution
+      summary: Act
+      operationId: post_api_v2_3_preview_execution_act
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ActRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/execution/orchestrate:
+    post:
+      tags:
+      - execution
+      summary: Orchestrate
+      operationId: post_api_v2_3_preview_execution_orchestrate
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/OrchestrateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OrchestrateResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/execution/policy/check:
+    post:
+      tags:
+      - execution
+      summary: Policy Check
+      operationId: post_api_v2_3_preview_execution_policy_check
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PolicyCheckRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PolicyCheckResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/cloud/consent:
+    post:
+      tags:
+      - cloud
+      summary: Save Consent
+      description: 'Consent endpoint: records acceptance and stores in memory with
+        audit trail (v0).'
+      operationId: post_api_v2_3_preview_cloud_consent
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/cloud/consent/audit:
+    get:
+      tags:
+      - cloud
+      summary: Audit Consent
+      operationId: get_api_v2_3_preview_cloud_consent_audit
+      parameters:
+      - name: user_id
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Get Api V2 3 Preview Cloud Consent Audit
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/cloud/consent/{user_id}:
+    get:
+      tags:
+      - cloud
+      summary: Get Consent
+      operationId: get_api_v2_3_preview_cloud_consent_user_id
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    delete:
+      tags:
+      - cloud
+      summary: Revoke Consent
+      operationId: delete_api_v2_3_preview_cloud_consent_user_id
+      parameters:
+      - name: user_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: User Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConsentResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/cloud/status:
+    get:
+      tags:
+      - cloud
+      summary: Cloud Status
+      description: 'Cloud status with basic health: memory sync latency, error rate,
+        last sync time.'
+      operationId: get_api_v2_3_preview_cloud_status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CloudStatus'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/rules:
+    post:
+      tags:
+      - experience
+      summary: Add Rule
+      operationId: post_api_v2_3_preview_experience_rules
+      parameters:
+      - name: dedup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Dedup
+      - name: upsert
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Upsert
+      requestBody:
         content:
           application/json:
             schema:
               type: object
-              properties:
-                reason:
-                  type: string
-                  description: 取消原因
-                force:
-                  type: boolean
-                  default: false
+              title: Payload
       responses:
         '200':
-          description: 任务取消结果
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-                  task_id: { type: string }
-                  previous_status: { type: string }
-                  cancellation_time: { type: string, format: date-time }
-                  partial_results_available: { type: boolean }
-                  budget_refunded: { type: number, minimum: 0 }
-                  affected_agents:
-                    type: array
-                    items: { type: string }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/tasks/{task_id}/result:
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/rules/{rule_id}:
     get:
-      summary: 任务结果获取
-      operationId: getAgentsTaskResult
-      tags: [agents]
+      tags:
+      - experience
+      summary: Get Rule
+      operationId: get_api_v2_3_preview_experience_rules_rule_id
       parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-        - in: path
-          name: task_id
-          required: true
-          schema: { type: string }
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
       responses:
         '200':
-          description: 已完成任务的最终结果与相关信息
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  task_id: { type: string }
-                  status: { type: string, enum: [completed, failed] }
-                  completion_time: { type: string, format: date-time, nullable: true }
-                  result:
-                    type: object
-                    properties:
-                      report_content: { type: string }
-                      citations:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            id: { type: string }
-                            title: { type: string }
-                            url: { type: string, format: uri }
-                            credibility_score: { type: number, minimum: 0, maximum: 1 }
-                            cited_in_sections:
-                              type: array
-                              items: { type: string }
-                      quality_metrics:
-                        type: object
-                        properties:
-                          overall_score: { type: number, minimum: 0, maximum: 1 }
-                          content_completeness: { type: number, minimum: 0, maximum: 1 }
-                          citation_accuracy: { type: number, minimum: 0, maximum: 1 }
-                          logical_coherence: { type: number, minimum: 0, maximum: 1 }
-                  execution_trace:
-                    type: object
-                    properties:
-                      total_duration_seconds: { type: number, minimum: 0 }
-                      phases:
-                        type: array
-                        items:
-                          type: object
-                          properties:
-                            phase: { type: string }
-                            duration_seconds: { type: number, minimum: 0 }
-                            agent: { type: string }
-                            key_decisions:
-                              type: array
-                              items: { type: string }
-                  budget_final:
-                    type: object
-                    properties:
-                      allocated: { type: number, minimum: 0 }
-                      used: { type: number, minimum: 0 }
-                      efficiency_ratio: { type: number, minimum: 0 }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/config:
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
     put:
-      summary: Agent配置管理
-      operationId: updateAgentsConfig
-      tags: [agents]
+      tags:
+      - experience
+      summary: Update Rule
+      operationId: put_api_v2_3_preview_experience_rules_rule_id
       parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              properties:
-                max_concurrent_tasks: { type: integer, minimum: 0 }
-                default_timeout_seconds: { type: integer, minimum: 0 }
-                quality_threshold_default: { type: number, minimum: 0, maximum: 1 }
-                budget_limit_per_task: { type: number, minimum: 0 }
-                agent_pool_settings:
-                  type: object
-                  additionalProperties:
-                    type: object
-                    properties:
-                      max_instances: { type: integer, minimum: 0 }
-                      idle_timeout: { type: integer, minimum: 0 }
+              title: Patch
       responses:
         '200':
-          description: 配置已更新
+          description: Successful Response
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success: { type: boolean }
-        '400': { $ref: '#/components/responses/BadRequest' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
-  /agents/tasks/{task_id}/trace:
-    get:
-      summary: 执行轨迹详情
-      operationId: getAgentsTaskTrace
-      tags: [agents]
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    delete:
+      tags:
+      - experience
+      summary: Delete Rule
+      operationId: delete_api_v2_3_preview_experience_rules_rule_id
       parameters:
-        - $ref: '#/components/parameters/X-Request-Id'
-        - in: path
-          name: task_id
-          required: true
-          schema: { type: string }
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
       responses:
         '200':
-          description: 任务的详细执行轨迹
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/candidates:
+    post:
+      tags:
+      - experience
+      summary: Add Candidate
+      operationId: post_api_v2_3_preview_experience_candidates
+      parameters:
+      - name: dedup
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Dedup
+      - name: upsert
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: false
+          title: Upsert
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExperienceRule'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    get:
+      tags:
+      - experience
+      summary: List Candidates
+      operationId: get_api_v2_3_preview_experience_candidates
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tag
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/candidates/{rule_id}/approve:
+    post:
+      tags:
+      - experience
+      summary: Approve Candidate
+      operationId: post_api_v2_3_preview_experience_candidates_rule_id_approve
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/candidates/{rule_id}/reject:
+    post:
+      tags:
+      - experience
+      summary: Reject Candidate
+      operationId: post_api_v2_3_preview_experience_candidates_rule_id_reject
+      parameters:
+      - name: rule_id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+          title: Rule Id
+      - name: reason
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Reason
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExperienceRule'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/rules/search:
+    get:
+      tags:
+      - experience
+      summary: Search Rules
+      operationId: get_api_v2_3_preview_experience_rules_search
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+      - name: tag
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tag
+      - name: category
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+      - name: status
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Status
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/snapshot/export:
+    get:
+      tags:
+      - experience
+      summary: Export Snapshot
+      operationId: get_api_v2_3_preview_experience_snapshot_export
+      parameters:
+      - name: compact
+        in: query
+        required: false
+        schema:
+          type: boolean
+          default: true
+          title: Compact
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/experience/snapshot/import:
+    post:
+      tags:
+      - experience
+      summary: Import Snapshot
+      operationId: post_api_v2_3_preview_experience_snapshot_import
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ImportRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/flags:
+    get:
+      tags:
+      - observability
+      summary: Get Flags
+      operationId: get_api_v2_3_preview_observability_flags
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - observability
+      summary: Update Flags
+      operationId: post_api_v2_3_preview_observability_flags
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FlagsUpdateRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/metrics:
+    get:
+      tags:
+      - observability
+      summary: Get Metrics
+      operationId: get_api_v2_3_preview_observability_metrics
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/logs/search:
+    get:
+      tags:
+      - observability
+      summary: Search Logs
+      operationId: get_api_v2_3_preview_observability_logs_search
+      parameters:
+      - name: q
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: text or tag contains
+          title: Q
+        description: text or tag contains
+      - name: level
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          description: INFO/WARN/ERROR
+          title: Level
+        description: INFO/WARN/ERROR
+      - name: limit
+        in: query
+        required: false
+        schema:
+          type: integer
+          maximum: 200
+          minimum: 1
+          default: 50
+          title: Limit
+      - name: since_seconds
+        in: query
+        required: false
+        schema:
+          anyOf:
+          - type: integer
+            minimum: 1
+          - type: 'null'
+          default: 3600
+          title: Since Seconds
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - observability
+      summary: Search Logs Post
+      operationId: post_api_v2_3_preview_observability_logs_search
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogSearchRequest'
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/shadow/config:
+    get:
+      tags:
+      - observability
+      summary: Get Shadow Config
+      operationId: get_api_v2_3_preview_observability_shadow_config
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowConfigResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    post:
+      tags:
+      - observability
+      summary: Update Shadow Config
+      operationId: post_api_v2_3_preview_observability_shadow_config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShadowConfigRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowConfigResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/slo/snapshot:
+    get:
+      tags:
+      - observability
+      summary: Slo Snapshot
+      operationId: get_api_v2_3_preview_observability_slo_snapshot
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLOSnapshot'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/shadow/diff:
+    post:
+      tags:
+      - observability
+      summary: Shadow Diff
+      operationId: post_api_v2_3_preview_observability_shadow_diff
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShadowDiffRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowDiffResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/shadow/diff/run:
+    post:
+      tags:
+      - observability
+      summary: Run Shadow Diff
+      operationId: post_api_v2_3_preview_observability_shadow_diff_run
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShadowRunRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowRunResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/shadow/diff/reports:
+    get:
+      tags:
+      - observability
+      summary: Shadow Diff Reports
+      operationId: get_api_v2_3_preview_observability_shadow_diff_reports
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ShadowReportListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/slo/snapshot/archive:
+    post:
+      tags:
+      - observability
+      summary: Slo Snapshot Archive
+      operationId: post_api_v2_3_preview_observability_slo_snapshot_archive
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SLOArchiveRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLOArchiveResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/slo/snapshot/list:
+    get:
+      tags:
+      - observability
+      summary: Slo Snapshot List
+      operationId: get_api_v2_3_preview_observability_slo_snapshot_list
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SLOArchiveListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/observability/slo/snapshot/download:
+    get:
+      tags:
+      - observability
+      summary: Slo Snapshot Download
+      operationId: get_api_v2_3_preview_observability_slo_snapshot_download
+      parameters:
+      - name: file
+        in: query
+        required: true
+        schema:
+          type: string
+          title: File
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/agents/run:
+    post:
+      tags:
+      - agents
+      summary: Run Agent
+      description: 'Minimal runnable implementation for /agents/run.
+
+        For preview, we do not actually execute tools; we return a queued run with
+        echo input.
+
+        Contract:
+
+        - Always returns 200 with a unique run_id
+
+        - status one of: pending | in_progress | completed (we use pending)
+
+        - created_at is ISO-8601 UTC time
+
+        - output echoes limited diagnostic fields for traceability'
+      operationId: post_api_v2_3_preview_agents_run
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RunRequest'
+        required: true
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RunResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/agents/status:
+    get:
+      tags:
+      - agents
+      summary: Get Status
+      operationId: get_api_v2_3_preview_agents_status
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentsStatusResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/agents/tasks/{task_id}:
+    get:
+      tags:
+      - agents
+      summary: Get Task
+      operationId: get_api_v2_3_preview_agents_tasks_task_id
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TaskDetailResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+    delete:
+      tags:
+      - agents
+      summary: Cancel Task
+      operationId: delete_api_v2_3_preview_agents_tasks_task_id
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      responses:
+        '200':
+          description: Successful Response
           content:
             application/json:
               schema:
                 type: object
-                properties:
-                  task_id: { type: string }
-                  trace_id: { type: string }
-                  detailed_timeline:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        timestamp: { type: string, format: date-time }
-                        agent_id: { type: string }
-                        action: { type: string }
-                        details: { type: object }
-                        thinking_process: { type: string, nullable: true }
-                  inter_agent_communications:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        timestamp: { type: string, format: date-time }
-                        from: { type: string }
-                        to: { type: string }
-                        message_type: { type: string }
-                        content: { type: string }
-                  decision_points:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        timestamp: { type: string, format: date-time }
-                        decision: { type: string }
-                        reasoning: { type: string }
-                        alternatives_considered:
-                          type: array
-                          items: { type: string }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '500': { $ref: '#/components/responses/ServerError' }
-
+                title: Response Delete Api V2 3 Preview Agents Tasks Task Id
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/agents/tasks/{task_id}/result:
+    get:
+      tags:
+      - agents
+      summary: Get Task Result
+      operationId: get_api_v2_3_preview_agents_tasks_task_id_result
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Get Api V2 3 Preview Agents Tasks Task Id Result
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /api/v2.3-preview/agents/tasks/{task_id}/trace:
+    get:
+      tags:
+      - agents
+      summary: Get Task Trace
+      operationId: get_api_v2_3_preview_agents_tasks_task_id_trace
+      parameters:
+      - name: task_id
+        in: path
+        required: true
+        schema:
+          type: string
+          title: Task Id
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema:
+                type: object
+                title: Response Get Api V2 3 Preview Agents Tasks Task Id Trace
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '423':
+          description: Locked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '429':
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorBody'
+  /:
+    get:
+      tags:
+      - meta
+      summary: Root
+      operationId: get
+      responses:
+        '200':
+          description: Successful Response
+          content:
+            application/json:
+              schema: {}
 components:
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
-  parameters:
-    X-Request-Id:
-      in: header
-      name: X-Request-Id
-      required: false
-      schema: { type: string }
-      description: 请求唯一标识，用于全链路追踪
-  headers:
-    RateLimit-Limit:
-      description: 本时间窗内的请求上限
-      schema: { type: integer }
-    RateLimit-Remaining:
-      description: 本时间窗内剩余请求数
-      schema: { type: integer }
-  responses:
-    BadRequest:
-      description: 请求格式错误或参数非法
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
-    Unauthorized:
-      description: 未授权或令牌无效
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
-    Conflict:
-      description: 资源冲突（如重复幂等键）
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
-    NotFound:
-      description: 资源不存在
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
-    TooManyRequests:
-      description: 超出限流
-      headers:
-        Retry-After:
-          description: 建议重试秒数
-          schema: { type: integer }
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
-    ServerError:
-      description: 服务器内部错误
-      content:
-        application/json: { schema: { $ref: '#/components/schemas/ErrorResponse' } }
   schemas:
-    Consent:
-      type: object
-      required: [id, userId, status, createdAt, updatedAt]
+    ActRequest:
       properties:
-        id: { type: string, format: uuid }
-        userId: { type: string, format: uuid }
-        status: { type: string, enum: [active, revoked, pending] }
-        scopes:
-          type: array
-          items: { $ref: '#/components/schemas/ConsentScope' }
-        expiresAt: { type: string, format: date-time, nullable: true }
-        revokeReason: { type: string, nullable: true }
-        revokeAt: { type: string, format: date-time, nullable: true }
-        createdAt: { type: string, format: date-time }
-        updatedAt: { type: string, format: date-time }
-    ConsentScope:
-      type: string
-      enum: [dialog, document, usage]
-    CloudSyncJob:
-      type: object
-      required: [id, userId, type, status, startedAt]
-      properties:
-        id: { type: string, format: uuid }
-        userId: { type: string, format: uuid }
-        type: { type: string, enum: [full, incremental, export] }
-        status: { type: string, enum: [pending, in_progress, completed, failed, timeout, manual_required] }
-        checksumBefore: { type: string, nullable: true }
-        checksumAfter: { type: string, nullable: true }
-        stats:
-          type: object
-          properties:
-            uploaded: { type: integer }
-            downloaded: { type: integer }
-            conflicts: { type: integer }
-            retries: { type: integer }
-        startedAt: { type: string, format: date-time }
-        finishedAt: { type: string, format: date-time, nullable: true }
-        errorCode: { type: string, nullable: true }
-        errorMsg: { type: string, nullable: true }
-    MemoryChange:
-      type: object
-      required: [op, itemType, data]
-      properties:
-        op: { type: string, enum: [add, update, delete] }
-        itemType: { type: string, enum: [memory, narrative, link] }
-        data:
-          type: object
-          description: 变更的数据内容（随类型而异）
-    ErrorResponse:
-      type: object
-      required: [code, message]
-      properties:
-        code: { type: string }
-        message: { type: string }
-        requestId: { type: string, nullable: true }
-    AgentsRunRequest:
-      type: object
-      required: [task_type, query]
-      properties:
-        task_type:
+        action:
           type: string
-          enum: [breadth_first_research, single_agent_analysis]
-          description: 任务类型
-        query:
-          type: string
-          minLength: 1
-          description: 研究主题或问题
-        max_agents:
-          type: integer
-          minimum: 1
-          maximum: 5
-          default: 3
-        budget:
+          title: Action
+        params:
           type: object
-          properties:
-            time_limit: { type: number, minimum: 0, description: '秒' }
-            cost_limit: { type: number, minimum: 0, description: '成本单位（示例）' }
-        quality_threshold:
-          type: number
-          minimum: 0
-          maximum: 1
-          default: 0.7
-    AgentCitation:
+          title: Params
+          default: {}
       type: object
+      required:
+      - action
+      title: ActRequest
+    ActResponse:
       properties:
-        source: { type: string, description: '来源URL或标识' }
-        credibility: { type: number, minimum: 0, maximum: 1 }
-        snippet: { type: string }
-    AgentCostBreakdown:
+        success:
+          type: boolean
+          title: Success
+        output:
+          type: object
+          title: Output
       type: object
+      required:
+      - success
+      - output
+      title: ActResponse
+    AgentHealth:
       properties:
-        search: { type: number }
-        synthesis: { type: number }
-        total: { type: number }
-    AgentsRunResponse:
-      type: object
-      required: [task_id, status]
-      properties:
-        task_id: { type: string }
         status:
           type: string
-          enum: [pending, in_progress, completed, failed, canceled, timeout]
-        results:
+          title: Status
+        last_check:
+          type: string
+          title: Last Check
+      type: object
+      required:
+      - status
+      - last_check
+      title: AgentHealth
+    AgentTask:
+      properties:
+        id:
+          type: string
+          title: Id
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - id
+      - status
+      title: AgentTask
+    AgentsStatusResponse:
+      properties:
+        status:
+          type: string
+          title: Status
+        health:
+          $ref: '#/components/schemas/AgentHealth'
+        tasks:
+          items:
+            $ref: '#/components/schemas/AgentTask'
+          type: array
+          title: Tasks
+          default: []
+      type: object
+      required:
+      - status
+      - health
+      title: AgentsStatusResponse
+    AttentionRequest:
+      properties:
+        target:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Target
+        mode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Mode
+          default: push
+      type: object
+      title: AttentionRequest
+    AttentionResponse:
+      properties:
+        current:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Current
+        stack:
+          items:
+            type: string
+          type: array
+          title: Stack
+        stack_size:
+          type: integer
+          title: Stack Size
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - current
+      - stack
+      - stack_size
+      - updated_at
+      title: AttentionResponse
+    CloudStatus:
+      properties:
+        status:
+          type: string
+          title: Status
+        service:
+          type: string
+          title: Service
+        version:
+          type: string
+          title: Version
+        timestamp:
+          type: string
+          title: Timestamp
+        last_sync_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Last Sync At
+        memory_sync_p95_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Memory Sync P95 Ms
+        memory_sync_error_rate:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Memory Sync Error Rate
+      type: object
+      required:
+      - status
+      - service
+      - version
+      - timestamp
+      title: CloudStatus
+    ConsentRequest:
+      properties:
+        user_id:
+          type: string
+          title: User Id
+        consent:
+          type: boolean
+          title: Consent
+          default: true
+        scopes:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Scopes
+          default: []
+      type: object
+      required:
+      - user_id
+      title: ConsentRequest
+    ConsentResponse:
+      properties:
+        consent_id:
+          type: string
+          title: Consent Id
+        user_id:
+          type: string
+          title: User Id
+        accepted:
+          type: boolean
+          title: Accepted
+        scopes:
+          items:
+            type: string
+          type: array
+          title: Scopes
+          default: []
+        timestamp:
+          type: string
+          title: Timestamp
+      type: object
+      required:
+      - consent_id
+      - user_id
+      - accepted
+      - timestamp
+      title: ConsentResponse
+    ErrorBody:
+      properties:
+        code:
+          type: integer
+          title: Code
+        message:
+          type: string
+          title: Message
+        trace_id:
+          type: string
+          title: Trace Id
+        details:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Details
+      type: object
+      required:
+      - code
+      - message
+      - trace_id
+      title: ErrorBody
+    ExperienceRule:
+      properties:
+        id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+        title:
+          type: string
+          title: Title
+        content:
+          type: string
+          title: Content
+        category:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Category
+          description: rule category
+          default: general
+        tags:
+          items:
+            type: string
+          type: array
+          title: Tags
+        sources:
+          items:
+            type: string
+          type: array
+          title: Sources
+        version:
+          type: string
+          title: Version
+          default: v1
+        confidence:
+          type: number
+          title: Confidence
+          default: 0.7
+        weight:
+          type: number
+          title: Weight
+          default: 1.0
+        status:
+          type: string
+          title: Status
+          description: active|deprecated|draft
+          default: active
+        created_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Created At
+        updated_at:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Updated At
+        fingerprint:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Fingerprint
+      type: object
+      required:
+      - title
+      - content
+      title: ExperienceRule
+    FlagsUpdateRequest:
+      properties:
+        flags:
           type: object
-          nullable: true
-          properties:
-            synthesis: { type: string }
-            citations:
-              type: array
-              items: { $ref: '#/components/schemas/AgentCitation' }
-            confidence: { type: number, minimum: 0, maximum: 1 }
-            coverage_score: { type: number, minimum: 0, maximum: 1 }
-        agents_used: { type: integer, minimum: 0 }
-        cost_breakdown: { $ref: '#/components/schemas/AgentCostBreakdown' }
+          title: Flags
+      type: object
+      required:
+      - flags
+      title: FlagsUpdateRequest
+    ImportRequest:
+      properties:
+        items:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/ExperienceRule'
+            type: array
+          - type: 'null'
+          title: Items
+        items_compact:
+          anyOf:
+          - items:
+              type: object
+            type: array
+          - type: 'null'
+          title: Items Compact
+        upsert:
+          type: boolean
+          title: Upsert
+          default: true
+        dedup:
+          type: boolean
+          title: Dedup
+          default: true
+      type: object
+      title: ImportRequest
+    LogSearchRequest:
+      properties:
+        q:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Q
+        query:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Query
+        level:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Level
+        limit:
+          type: integer
+          title: Limit
+          default: 50
+        since_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Since Seconds
+          default: 3600
+      type: object
+      title: LogSearchRequest
+    MemoryChangeRecord:
+      properties:
+        seq:
+          type: integer
+          title: Seq
+        id:
+          type: string
+          title: Id
+        ts:
+          type: string
+          title: Ts
+        op:
+          type: string
+          title: Op
+        layer:
+          type: string
+          title: Layer
+          default: working
+      type: object
+      required:
+      - seq
+      - id
+      - ts
+      - op
+      title: MemoryChangeRecord
+    MemoryChangesResponse:
+      properties:
+        from_seq:
+          type: integer
+          title: From Seq
+        to_seq:
+          type: integer
+          title: To Seq
+        count:
+          type: integer
+          title: Count
+        items:
+          items:
+            $ref: '#/components/schemas/MemoryChangeRecord'
+          type: array
+          title: Items
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - from_seq
+      - to_seq
+      - count
+      - items
+      - updated_at
+      title: MemoryChangesResponse
+    MemoryConsistencyIssue:
+      properties:
+        type:
+          type: string
+          title: Type
+        detail:
+          type: string
+          title: Detail
+      type: object
+      required:
+      - type
+      - detail
+      title: MemoryConsistencyIssue
+    MemoryConsistencyResponse:
+      properties:
+        ok:
+          type: boolean
+          title: Ok
+        issues:
+          items:
+            $ref: '#/components/schemas/MemoryConsistencyIssue'
+          type: array
+          title: Issues
+        summary:
+          type: object
+          title: Summary
+        checked_at:
+          type: string
+          title: Checked At
+      type: object
+      required:
+      - ok
+      - issues
+      - summary
+      - checked_at
+      title: MemoryConsistencyResponse
+    MemoryExportRequest:
+      properties:
+        format:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Format
+          default: json
+        limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Limit
+          default: 100
+        since_seconds:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Since Seconds
+        anonymize:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Anonymize
+          default: false
+        exclude_fields:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Exclude Fields
+      type: object
+      title: MemoryExportRequest
+    MemoryExportResponse:
+      properties:
+        export_url:
+          type: string
+          title: Export Url
+        expires_at:
+          type: string
+          title: Expires At
+      type: object
+      required:
+      - export_url
+      - expires_at
+      title: MemoryExportResponse
+    MemoryImportRequest:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MemoryItem'
+          type: array
+          title: Items
+        dry_run:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Dry Run
+          default: false
+        force:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Force
+          default: false
+      type: object
+      title: MemoryImportRequest
+    MemoryImportResponse:
+      properties:
+        imported_count:
+          type: integer
+          title: Imported Count
+        conflicts:
+          type: integer
+          title: Conflicts
+        dry_run:
+          type: boolean
+          title: Dry Run
+        finished_at:
+          type: string
+          title: Finished At
+      type: object
+      required:
+      - imported_count
+      - conflicts
+      - dry_run
+      - finished_at
+      title: MemoryImportResponse
+    MemoryItem:
+      properties:
+        id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Id
+        content:
+          type: object
+          title: Content
+        layer:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Layer
+          description: 'memory layer: working|episodic|semantic|programmatic'
+          default: working
+      type: object
+      required:
+      - content
+      title: MemoryItem
+    MemoryLayersResponse:
+      properties:
+        layers:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Layers
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - layers
+      - updated_at
+      title: MemoryLayersResponse
+    MemoryRollbackRequest:
+      properties:
+        snapshot_id:
+          type: string
+          title: Snapshot Id
+      type: object
+      required:
+      - snapshot_id
+      title: MemoryRollbackRequest
+    MemoryRollbackResponse:
+      properties:
+        restored:
+          type: boolean
+          title: Restored
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Counts
+        finished_at:
+          type: string
+          title: Finished At
+      type: object
+      required:
+      - restored
+      - counts
+      - finished_at
+      title: MemoryRollbackResponse
+    MemorySnapshotResponse:
+      properties:
+        snapshot_id:
+          type: string
+          title: Snapshot Id
+        snapshot_url:
+          type: string
+          title: Snapshot Url
+        created_at:
+          type: string
+          title: Created At
+        counts:
+          additionalProperties:
+            type: integer
+          type: object
+          title: Counts
+      type: object
+      required:
+      - snapshot_id
+      - snapshot_url
+      - created_at
+      - counts
+      title: MemorySnapshotResponse
+    MemorySyncRequest:
+      properties:
+        items:
+          items:
+            $ref: '#/components/schemas/MemoryItem'
+          type: array
+          title: Items
+        force:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Force
+          default: false
+        timeout:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Timeout
+          default: 30
+      type: object
+      title: MemorySyncRequest
+    MemorySyncResponse:
+      properties:
+        synced_count:
+          type: integer
+          title: Synced Count
+        failed_count:
+          type: integer
+          title: Failed Count
+        trace_id:
+          type: string
+          title: Trace Id
+        finished_at:
+          type: string
+          title: Finished At
+      type: object
+      required:
+      - synced_count
+      - failed_count
+      - trace_id
+      - finished_at
+      title: MemorySyncResponse
+    OrchestrateRequest:
+      properties:
+        plan_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Plan Id
+        tool_calls:
+          items:
+            $ref: '#/components/schemas/ToolCall'
+          type: array
+          title: Tool Calls
+      type: object
+      required:
+      - tool_calls
+      title: OrchestrateRequest
+    OrchestrateResponse:
+      properties:
+        results:
+          items:
+            $ref: '#/components/schemas/OrchestrateResult'
+          type: array
+          title: Results
+        started_at:
+          type: string
+          title: Started At
+        finished_at:
+          type: string
+          title: Finished At
+      type: object
+      required:
+      - results
+      - started_at
+      - finished_at
+      title: OrchestrateResponse
+    OrchestrateResult:
+      properties:
+        name:
+          type: string
+          title: Name
+        ok:
+          type: boolean
+          title: Ok
+        output:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Output
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+        elapsed_ms:
+          type: integer
+          title: Elapsed Ms
+      type: object
+      required:
+      - name
+      - ok
+      - elapsed_ms
+      title: OrchestrateResult
+    PlanDetailResponse:
+      properties:
+        plan_id:
+          type: string
+          title: Plan Id
+        goal:
+          type: string
+          title: Goal
+        constraints:
+          items:
+            type: string
+          type: array
+          title: Constraints
+        steps:
+          items:
+            $ref: '#/components/schemas/PlanStep'
+          type: array
+          title: Steps
+        created_at:
+          type: string
+          title: Created At
+        status:
+          type: string
+          title: Status
+      type: object
+      required:
+      - plan_id
+      - goal
+      - constraints
+      - steps
+      - created_at
+      - status
+      title: PlanDetailResponse
+    PlanRequest:
+      properties:
+        goal:
+          type: string
+          title: Goal
+        constraints:
+          items:
+            type: string
+          type: array
+          title: Constraints
+          default: []
+        max_steps:
+          type: integer
+          title: Max Steps
+          default: 5
+      type: object
+      required:
+      - goal
+      title: PlanRequest
+    PlanResponse:
+      properties:
+        plan_id:
+          type: string
+          title: Plan Id
+        steps:
+          items:
+            $ref: '#/components/schemas/PlanStep'
+          type: array
+          title: Steps
+      type: object
+      required:
+      - plan_id
+      - steps
+      title: PlanResponse
+    PlanStep:
+      properties:
+        index:
+          type: integer
+          title: Index
+        action:
+          type: string
+          title: Action
+        expected_outcome:
+          type: string
+          title: Expected Outcome
+        rationale:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Rationale
+        status:
+          type: string
+          title: Status
+          default: pending
+      type: object
+      required:
+      - index
+      - action
+      - expected_outcome
+      title: PlanStep
+    PlanTraceEvent:
+      properties:
+        ts:
+          type: string
+          title: Ts
+        type:
+          type: string
+          title: Type
+        message:
+          type: string
+          title: Message
+        data:
+          anyOf:
+          - type: object
+          - type: 'null'
+          title: Data
+      type: object
+      required:
+      - ts
+      - type
+      - message
+      title: PlanTraceEvent
+    PlanTraceResponse:
+      properties:
+        plan_id:
+          type: string
+          title: Plan Id
+        events:
+          items:
+            $ref: '#/components/schemas/PlanTraceEvent'
+          type: array
+          title: Events
+      type: object
+      required:
+      - plan_id
+      - events
+      title: PlanTraceResponse
+    PolicyCheckRequest:
+      properties:
+        subject:
+          type: string
+          title: Subject
+        action:
+          type: string
+          title: Action
+        resource:
+          type: string
+          title: Resource
+        context:
+          type: object
+          title: Context
+          default: {}
+      type: object
+      required:
+      - subject
+      - action
+      - resource
+      title: PolicyCheckRequest
+    PolicyCheckResponse:
+      properties:
+        allow:
+          type: boolean
+          title: Allow
+        reason:
+          type: string
+          title: Reason
+      type: object
+      required:
+      - allow
+      - reason
+      title: PolicyCheckResponse
+    RunRequest:
+      properties:
+        agent_id:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Agent Id
+        input:
+          type: object
+          title: Input
+          default: {}
+        timeout_ms:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Timeout Ms
+          default: 10000
+      type: object
+      title: RunRequest
+    RunResponse:
+      properties:
+        run_id:
+          type: string
+          title: Run Id
+        status:
+          type: string
+          title: Status
+        created_at:
+          type: string
+          title: Created At
+        output:
+          type: object
+          title: Output
+          default: {}
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - run_id
+      - status
+      - created_at
+      title: RunResponse
+    SLOArchiveItem:
+      properties:
+        file:
+          type: string
+          title: File
+        generated_at:
+          type: string
+          title: Generated At
+        availability:
+          type: number
+          title: Availability
+        error_rate:
+          type: number
+          title: Error Rate
+        p95_latency_ms:
+          type: number
+          title: P95 Latency Ms
+        tag:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tag
+      type: object
+      required:
+      - file
+      - generated_at
+      - availability
+      - error_rate
+      - p95_latency_ms
+      title: SLOArchiveItem
+    SLOArchiveListResponse:
+      properties:
+        count:
+          type: integer
+          title: Count
+        items:
+          items:
+            $ref: '#/components/schemas/SLOArchiveItem'
+          type: array
+          title: Items
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - count
+      - items
+      - updated_at
+      title: SLOArchiveListResponse
+    SLOArchiveRequest:
+      properties:
+        tag:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Tag
+        note:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Note
+      type: object
+      title: SLOArchiveRequest
+    SLOArchiveResponse:
+      properties:
+        saved:
+          type: boolean
+          title: Saved
+        path:
+          type: string
+          title: Path
+        item:
+          $ref: '#/components/schemas/SLOArchiveItem'
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - saved
+      - path
+      - item
+      - updated_at
+      title: SLOArchiveResponse
+    SLOSnapshot:
+      properties:
+        availability:
+          type: number
+          title: Availability
+        error_rate:
+          type: number
+          title: Error Rate
+        latency_ms:
+          additionalProperties:
+            type: number
+          type: object
+          title: Latency Ms
+        window:
+          type: string
+          title: Window
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - availability
+      - error_rate
+      - latency_ms
+      - window
+      - updated_at
+      title: SLOSnapshot
+    SearchResponse:
+      properties:
+        count:
+          type: integer
+          title: Count
+        returned:
+          type: integer
+          title: Returned
+        items:
+          items:
+            $ref: '#/components/schemas/ExperienceRule'
+          type: array
+          title: Items
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - count
+      - returned
+      - items
+      - updated_at
+      title: SearchResponse
+    ShadowConfigRequest:
+      properties:
+        tolerance_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tolerance Ms
+        acceptance_threshold:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Acceptance Threshold
+        status_mismatch_block:
+          anyOf:
+          - type: boolean
+          - type: 'null'
+          title: Status Mismatch Block
+      type: object
+      title: ShadowConfigRequest
+    ShadowConfigResponse:
+      properties:
+        tolerance_ms:
+          type: number
+          title: Tolerance Ms
+        acceptance_threshold:
+          type: number
+          title: Acceptance Threshold
+        status_mismatch_block:
+          type: boolean
+          title: Status Mismatch Block
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - tolerance_ms
+      - acceptance_threshold
+      - status_mismatch_block
+      - updated_at
+      title: ShadowConfigResponse
+    ShadowDiffRequest:
+      properties:
+        baseline:
+          type: object
+          title: Baseline
+        candidate:
+          type: object
+          title: Candidate
+        tolerance_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tolerance Ms
+          default: 100.0
+      type: object
+      required:
+      - baseline
+      - candidate
+      title: ShadowDiffRequest
+    ShadowDiffResponse:
+      properties:
+        accepted:
+          type: boolean
+          title: Accepted
+        score:
+          type: number
+          title: Score
+        differences:
+          items:
+            type: string
+          type: array
+          title: Differences
+        latency_diff_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Latency Diff Ms
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - accepted
+      - score
+      - differences
+      - updated_at
+      title: ShadowDiffResponse
+    ShadowReportItem:
+      properties:
+        file:
+          type: string
+          title: File
+        generated_at:
+          type: string
+          title: Generated At
+        total:
+          type: integer
+          title: Total
+        accepted:
+          type: integer
+          title: Accepted
+        acceptance_rate:
+          type: number
+          title: Acceptance Rate
+      type: object
+      required:
+      - file
+      - generated_at
+      - total
+      - accepted
+      - acceptance_rate
+      title: ShadowReportItem
+    ShadowReportListResponse:
+      properties:
+        count:
+          type: integer
+          title: Count
+        items:
+          items:
+            $ref: '#/components/schemas/ShadowReportItem'
+          type: array
+          title: Items
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - count
+      - items
+      - updated_at
+      title: ShadowReportListResponse
+    ShadowRunRequest:
+      properties:
+        baseline_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Baseline Path
+        candidate_path:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Candidate Path
+        tolerance_ms:
+          anyOf:
+          - type: number
+          - type: 'null'
+          title: Tolerance Ms
+        output_dir:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Output Dir
+        limit:
+          anyOf:
+          - type: integer
+          - type: 'null'
+          title: Limit
+          default: 0
+      type: object
+      title: ShadowRunRequest
+    ShadowRunResponse:
+      properties:
+        total:
+          type: integer
+          title: Total
+        accepted:
+          type: integer
+          title: Accepted
+        acceptance_rate:
+          type: number
+          title: Acceptance Rate
+        report_file:
+          type: string
+          title: Report File
+        updated_at:
+          type: string
+          title: Updated At
+      type: object
+      required:
+      - total
+      - accepted
+      - acceptance_rate
+      - report_file
+      - updated_at
+      title: ShadowRunResponse
+    StateRequest:
+      properties:
+        state:
+          type: string
+          title: State
+        goal:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Goal
+        force:
+          type: boolean
+          title: Force
+          default: false
+      type: object
+      required:
+      - state
+      title: StateRequest
+    StateResponse:
+      properties:
+        state:
+          type: string
+          title: State
+        updated_at:
+          type: string
+          title: Updated At
+        current_goal:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Current Goal
+        goal_stack:
+          items:
+            type: string
+          type: array
+          title: Goal Stack
+        allowed_next_states:
+          items:
+            type: string
+          type: array
+          title: Allowed Next States
+      type: object
+      required:
+      - state
+      - updated_at
+      - current_goal
+      - goal_stack
+      - allowed_next_states
+      title: StateResponse
+    TaskDetailResponse:
+      properties:
+        id:
+          type: string
+          title: Id
+        status:
+          type: string
+          title: Status
+        created_at:
+          type: string
+          title: Created At
+        output:
+          type: object
+          title: Output
+          default: {}
+        error:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Error
+      type: object
+      required:
+      - id
+      - status
+      - created_at
+      title: TaskDetailResponse
+    ToolCall:
+      properties:
+        name:
+          type: string
+          title: Name
+        args:
+          type: object
+          title: Args
+          default: {}
+        timeout_ms:
+          type: integer
+          maximum: 60000.0
+          minimum: 1.0
+          title: Timeout Ms
+          default: 10000
+      type: object
+      required:
+      - name
+      title: ToolCall
